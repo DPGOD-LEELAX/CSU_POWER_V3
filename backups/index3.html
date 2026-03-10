@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 100%; /* Changed from 1800px to full width */
+            max-width: 1800px;
             margin: 0 auto;
             background: rgba(255, 255, 255, 0.98);
             border-radius: 30px;
@@ -52,7 +52,6 @@
             opacity: 0.9;
             display: flex;
             gap: 40px;
-            flex-wrap: wrap;
         }
 
         .badge {
@@ -403,13 +402,10 @@
 
         .right-panel {
             flex: 1;
-            min-width: 0; /* Important for flexbox */
             background: white;
             border-radius: 25px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
             padding: 25px;
-            display: flex;
-            flex-direction: column;
         }
 
         .canvas-container {
@@ -417,9 +413,8 @@
             border-radius: 20px;
             padding: 20px;
             position: relative;
-            overflow: auto; /* Changed from 'hidden' to 'auto' for scrolling */
-            height: 700px; /* Increased height */
-            width: 100%;
+            overflow: hidden;
+            height: 600px;
             border: 3px solid #e0e7ff;
             box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
             cursor: grab;
@@ -431,11 +426,8 @@
 
         #powerCanvas {
             display: block;
-            background: #f0f4f8;
-            width: 2500px; /* Fixed larger width */
-            height: 1800px; /* Fixed larger height */
-            max-width: none;
             transform-origin: 0 0;
+            background: #f0f4f8;
         }
 
         .legend {
@@ -468,7 +460,6 @@
         .color-box.yellow { background: #ffff00; }
         .color-box.orange { background: #ff8000; }
         .color-box.red { background: #ff0000; }
-        .color-box.gray { background: #999999; } /* Added for neutral bus */
         .color-box.primary { background: #ff6600; }
         .color-box.secondary { background: #3366cc; }
 
@@ -566,7 +557,7 @@
                             <i class="fas fa-bullseye fa-2x" style="color: #e74c3c;"></i>
                             <div>
                                 <strong style="font-size: 1.1em;">CENTRALIZED SYSTEM</strong><br>
-                                <small>1 Meter - 7 Buses (NEUTRAL Bus has NO LOAD)</small>
+                                <small>1 Meter - 7 Buses (incl. Neutral)</small>
                             </div>
                         </label>
                     </div>
@@ -692,16 +683,13 @@
                     <button class="canvas-btn" onclick="resetView()">
                         <i class="fas fa-expand"></i> Reset View
                     </button>
-                    <button class="canvas-btn" onclick="fitToView()">
-                        <i class="fas fa-arrows-alt"></i> Fit to View
-                    </button>
                     <button class="canvas-btn special" onclick="loadYourLayout()">
-                        <i class="fas fa-star"></i> CURRENT LAYOUT
+                        <i class="fas fa-star"></i> YOUR LAYOUT
                     </button>
                     <span class="zoom-level" id="zoomLevel">100%</span>
                 </div>
                 <div class="canvas-container" id="canvasContainer">
-                    <canvas id="powerCanvas" width="2500" height="1800"></canvas>
+                    <canvas id="powerCanvas" width="2000" height="1500"></canvas>
                 </div>
 
                 <!-- Legend -->
@@ -721,10 +709,6 @@
                     <div class="legend-item">
                         <div class="color-box red"></div>
                         <span>Violation (<0.93)</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="color-box gray"></div>
-                        <span>Neutral Bus (No Load)</span>
                     </div>
                     <div class="legend-item">
                         <div class="line-sample"></div>
@@ -763,7 +747,7 @@
 
         const centBusNames = [
             "Bus 1", "Bus 2", "Bus 3", 
-            "Bus 4", "Bus 5", "Bus 6", "Bus 7 (NEUTRAL)"
+            "Bus 4", "Bus 5", "Bus 6", "Bus 7"
         ];
 
         let busNames = distBusNames;
@@ -788,7 +772,7 @@
             { name: "Bus 4", kva: 100 },
             { name: "Bus 5", kva: 100 },
             { name: "Bus 6", kva: 50 },
-            { name: "Bus 7 (Neutral)", kva: 0 } // Neutral bus has 0 kVA
+            { name: "Bus 7 (Neutral)", kva: 0 }
         ];
 
         let Pbase = [];
@@ -1087,66 +1071,54 @@
         }
 
         // ===========================================
-        // VOLTAGE CALCULATION - IMPROVED NEUTRAL HANDLING
+        // VOLTAGE CALCULATION
         // ===========================================
-        // ===========================================
-// FIXED VOLTAGE CALCULATION
-// Replace your existing calculateVoltages() function with this
-// ===========================================
         function calculateVoltages() {
             const size = systemType === 'distributed' ? 9 : 7;
             const voltages = new Array(size).fill(1.0);
             
             if (systemType === 'distributed') {
-            const loadDiff = loadMultiplier - 1.0;
-            const pfDiff = 0.95 - powerFactor;
-            
-            for (let i = 0; i < 9; i++) {
-                let baseVoltage = 0.975;
+                const loadDiff = loadMultiplier - 1.0;
+                const pfDiff = 0.95 - powerFactor;
                 
-                // Distance drop based on position in group
-                if (i % 3 === 0) baseVoltage -= 0.005;  // First in group
-                if (i % 3 === 1) baseVoltage -= 0.010;  // Second in group
-                if (i % 3 === 2) baseVoltage -= 0.015;  // Third in group
-                
-                // C group (buses 6-8) has lower capacity
-                if (i >= 6) baseVoltage -= 0.010;
-                
-                // Apply load multiplier effect
-                if (loadMultiplier > 1.0) {
-                    baseVoltage -= (loadMultiplier - 1.0) * 0.04;
-                } else if (loadMultiplier < 1.0) {
-                    baseVoltage += (1.0 - loadMultiplier) * 0.03;
+                for (let i = 0; i < 9; i++) {
+                    let baseVoltage = 0.975;
+                    
+                    // Distance drop (further buses have lower voltage)
+                    if (i % 3 === 0) baseVoltage -= 0.005;
+                    if (i % 3 === 1) baseVoltage -= 0.010;
+                    if (i % 3 === 2) baseVoltage -= 0.015;
+                    
+                    // Load effect
+                    if (loadDiff > 0) {
+                        baseVoltage -= loadDiff * 0.04;
+                    } else if (loadDiff < 0) {
+                        baseVoltage += Math.abs(loadDiff) * 0.03;
+                    }
+                    
+                    // PF effect
+                    baseVoltage -= pfDiff * 0.03;
+                    
+                    voltages[i] = Math.max(0.75, Math.min(1.02, baseVoltage));
                 }
                 
-                // Apply power factor effect
-                const pfEffect = (0.95 - powerFactor) * 0.03;
-                baseVoltage -= pfEffect;
-                
-                voltages[i] = Math.max(0.85, Math.min(1.02, baseVoltage));
-            }
-        } else {
+            } else {
                 const loadDiff = loadMultiplier - 1.0;
                 const pfDiff = 0.95 - powerFactor;
                 
                 for (let i = 0; i < 7; i++) {
                     if (i === 6) {
-                        // NEUTRAL BUS - no load, voltage ~0
                         voltages[i] = 0.01;
                     } else {
-                        // Base voltage decreases with distance from source
                         let baseVoltage = 0.965 - (i * 0.012);
                         
-                        // Apply load multiplier effect (STRONGER in centralized)
-                        if (loadMultiplier > 1.0) {
-                            baseVoltage -= (loadMultiplier - 1.0) * 0.06;
-                        } else if (loadMultiplier < 1.0) {
-                            baseVoltage += (1.0 - loadMultiplier) * 0.02;
+                        if (loadDiff > 0) {
+                            baseVoltage -= loadDiff * 0.06;
+                        } else if (loadDiff < 0) {
+                            baseVoltage += Math.abs(loadDiff) * 0.02;
                         }
                         
-                        // Apply power factor effect (STRONGER in centralized)
-                        const pfEffect = (0.95 - powerFactor) * 0.05;
-                        baseVoltage -= pfEffect;
+                        baseVoltage -= pfDiff * 0.05;
                         
                         voltages[i] = Math.max(0.75, Math.min(1.02, baseVoltage));
                     }
@@ -1156,24 +1128,17 @@
             return voltages;
         }
 
-        // Get color based on voltage - IMPROVED FOR NEUTRAL BUS
-        function getVoltageColor(voltage, isNeutral = false) {
-            if (isNeutral) return '#999999'; // Gray for neutral bus
+        // Get color based on voltage
+        function getVoltageColor(voltage) {
             if (voltage >= 0.97) return '#00ff00';
             if (voltage >= 0.95) return '#ffff00';
             if (voltage >= 0.93) return '#ff8000';
             return '#ff0000';
         }
 
-        // Calculate load factor - EXCLUDE NEUTRAL BUS
+        // Calculate load factor
         function calculateLoadFactor() {
-            // Filter out neutral bus (index 6) for centralized system
-            let activePbase = [...Pbase];
-            if (systemType === 'centralized') {
-                activePbase = Pbase.filter((_, index) => index !== 6);
-            }
-            
-            const totalLoad = activePbase.reduce((a, b) => a + b, 0) * loadMultiplier;
+            const totalLoad = Pbase.reduce((a, b) => a + b, 0) * loadMultiplier;
             const peakFromHistorical = 24.2 * 3 * loadMultiplier;
             
             return {
@@ -1187,13 +1152,7 @@
         // Update displays
         function updateLoadMetrics() {
             const lf = calculateLoadFactor();
-            
-            // Calculate total load excluding neutral
-            let activePbase = [...Pbase];
-            if (systemType === 'centralized') {
-                activePbase = Pbase.filter((_, index) => index !== 6);
-            }
-            const totalLoad = activePbase.reduce((a, b) => a + b, 0) * loadMultiplier;
+            const totalLoad = Pbase.reduce((a, b) => a + b, 0) * loadMultiplier;
             const totalLoss = totalLoad * (systemType === 'distributed' ? 0.015 : 0.03);
 
             const metricsHtml = `
@@ -1222,13 +1181,7 @@
         function updateDataDisplay() {
             busVoltages = calculateVoltages();
             const currentBusNames = systemType === 'distributed' ? distBusNames : centBusNames;
-            
-            // Calculate total load excluding neutral
-            let activePbase = [...Pbase];
-            if (systemType === 'centralized') {
-                activePbase = Pbase.filter((_, index) => index !== 6);
-            }
-            const totalLoad = activePbase.reduce((a, b) => a + b, 0) * loadMultiplier;
+            const totalLoad = Pbase.reduce((a, b) => a + b, 0) * loadMultiplier;
             
             let html = `
                 <span style="color: #ffd700;">╔════════════════════════════════════╗</span><br>
@@ -1238,12 +1191,12 @@
             `;
             
             for (let i = 0; i < busVoltages.length; i++) {
+                const status = busVoltages[i] >= 0.97 ? '✓' : (busVoltages[i] >= 0.95 ? '⚠️' : '❌');
+                const drop = ((1.0 - busVoltages[i]) * 100).toFixed(2);
+                
                 if (systemType === 'centralized' && i === 6) {
-                    // Neutral bus - special display
-                    html += `⚡ ${currentBusNames[i].padEnd(15)}: ${busVoltages[i].toFixed(4)} pu (NO LOAD)<br>`;
+                    html += `⚡ ${currentBusNames[i].padEnd(15)}: ${busVoltages[i].toFixed(4)} pu (NEUTRAL)<br>`;
                 } else {
-                    const status = busVoltages[i] >= 0.97 ? '✓' : (busVoltages[i] >= 0.95 ? '⚠️' : '❌');
-                    const drop = ((1.0 - busVoltages[i]) * 100).toFixed(2);
                     html += `${status} ${currentBusNames[i].padEnd(15)}: ${busVoltages[i].toFixed(4)} pu (drop ${drop}%)<br>`;
                 }
             }
@@ -1253,23 +1206,15 @@
             html += `<span style="color: #3498db;">Power Factor:</span> ${powerFactor.toFixed(2)}<br>`;
             html += `<span style="color: #3498db;">Mode:</span> ${systemType === 'distributed' ? 'Distributed (9 buses)' : 'Centralized (7 buses)'}<br>`;
             html += `<span style="color: #3498db;">System Capacity:</span> 750 kVA (Meters: 300+300+150 kVA)<br>`;
-            html += `<span style="color: #ffd700;">Note:</span> Neutral bus has NO load<br>`;
             
             document.getElementById('dataDisplay').innerHTML = html;
         }
 
-        // Update compliance display - EXCLUDE NEUTRAL FROM WORST CASE
+        // Update compliance display
         function updateComplianceDisplay() {
             busVoltages = calculateVoltages();
             const currentBusNames = systemType === 'distributed' ? distBusNames : centBusNames;
-            
-            // For centralized, exclude neutral from worst case calculation
-            let voltagesToCheck = [...busVoltages];
-            if (systemType === 'centralized') {
-                voltagesToCheck = busVoltages.filter((_, index) => index !== 6);
-            }
-            
-            const worstV = Math.min(...voltagesToCheck);
+            const worstV = Math.min(...busVoltages);
             const worstIdx = busVoltages.indexOf(worstV);
             const dropPercent = (1.0 - worstV) * 100;
             const isCompliant = worstV >= 0.95;
@@ -1290,10 +1235,6 @@
             html += `<span style="color: #ffd700;">Current Worst Drop:</span> <span style="color: ${isCompliant ? '#27ae60' : '#e74c3c'};">${dropPercent.toFixed(2)}%</span><br>`;
             html += `<span style="color: #ffd700;">Worst Location:</span> ${currentBusNames[worstIdx]}<br>`;
             html += `<span style="color: #ffd700;">Voltage:</span> ${worstV.toFixed(4)} pu<br>`;
-            
-            if (systemType === 'centralized') {
-                html += `<span style="color: #ffd700;">Note:</span> Neutral bus excluded from PEC compliance<br>`;
-            }
             
             html += `<br><span style="color: #ffd700;">RECOMMENDATION:</span><br>`;
             
@@ -1623,11 +1564,10 @@
                 }
             }
             
-            // Draw all buses - IMPROVED NEUTRAL BUS HANDLING
+            // Draw all buses
             for (let i = 0; i < busPositions.length; i++) {
                 const v = busVoltages[i] || 1.0;
-                const isNeutral = (systemType === 'centralized' && i === 6);
-                const color = getVoltageColor(v, isNeutral);
+                const color = getVoltageColor(v);
                 const pos = busPositions[i];
                 
                 ctx.fillStyle = color;
@@ -1637,19 +1577,15 @@
                 ctx.strokeRect(pos.x - 30, pos.y - 15, 60, 30);
                 
                 ctx.font = 'bold 9px Arial';
-                ctx.fillStyle = isNeutral ? '#ffffff' : '#000'; // White text on gray background
+                ctx.fillStyle = '#000';
                 ctx.textAlign = 'center';
                 
                 // Use currentBusNames
                 ctx.fillText(currentBusNames[i], pos.x, pos.y - 2);
                 
                 ctx.font = 'bold 7px monospace';
-                ctx.fillStyle = isNeutral ? '#ffffff' : '#000';
-                if (isNeutral) {
-                    ctx.fillText('NEUTRAL', pos.x, pos.y + 10);
-                } else {
-                    ctx.fillText(v.toFixed(3) + ' pu', pos.x, pos.y + 10);
-                }
+                ctx.fillStyle = '#000';
+                ctx.fillText(v.toFixed(3) + ' pu', pos.x, pos.y + 10);
             }
             
             // Highlight selected element
@@ -1717,55 +1653,6 @@
             offsetX = 0;
             offsetY = 0;
             document.getElementById('zoomLevel').textContent = '100%';
-            drawCanvas();
-        }
-
-        function fitToView() {
-            // Find the bounds of all elements
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            
-            const allElements = [
-                sourcePos,
-                mainTxPos,
-                ...busPositions,
-                ...Object.values(meterPos),
-                ...distTxPos
-            ];
-            
-            allElements.forEach(el => {
-                if (el && el.x) {
-                    minX = Math.min(minX, el.x);
-                    maxX = Math.max(maxX, el.x);
-                }
-                if (el && el.y) {
-                    minY = Math.min(minY, el.y);
-                    maxY = Math.max(maxY, el.y);
-                }
-            });
-            
-            // Add padding
-            minX -= 100;
-            minY -= 100;
-            maxX += 100;
-            maxY += 100;
-            
-            // Calculate scale to fit
-            const container = document.getElementById('canvasContainer');
-            const containerWidth = container.clientWidth - 40;
-            const containerHeight = container.clientHeight - 40;
-            
-            const width = maxX - minX;
-            const height = maxY - minY;
-            
-            const scaleX = containerWidth / width;
-            const scaleY = containerHeight / height;
-            scale = Math.min(scaleX, scaleY, 1.5); // Cap at 1.5x
-            
-            // Center the view
-            offsetX = (containerWidth/2 - (minX + maxX)/2 * scale);
-            offsetY = (containerHeight/2 - (minY + maxY)/2 * scale);
-            
-            document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
             drawCanvas();
         }
 
@@ -2000,7 +1887,6 @@
         window.zoomIn = zoomIn;
         window.zoomOut = zoomOut;
         window.resetView = resetView;
-        window.fitToView = fitToView;
         window.arrangeNeatly = arrangeNeatly;
         window.saveDistributedLayout = saveDistributedLayout;
         window.saveCentralizedLayout = saveCentralizedLayout;

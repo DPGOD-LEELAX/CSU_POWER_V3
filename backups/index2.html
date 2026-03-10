@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSU-Carig Power Flow - YOUR EXACT LAYOUT</title>
+    <title>CSU-Carig Power Flow - CONFIGURABLE LAYOUT</title>
     <style>
         * {
             margin: 0;
@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 100%; /* Changed from 1800px to full width */
+            max-width: 1800px;
             margin: 0 auto;
             background: rgba(255, 255, 255, 0.98);
             border-radius: 30px;
@@ -52,7 +52,6 @@
             opacity: 0.9;
             display: flex;
             gap: 40px;
-            flex-wrap: wrap;
         }
 
         .badge {
@@ -403,13 +402,10 @@
 
         .right-panel {
             flex: 1;
-            min-width: 0; /* Important for flexbox */
             background: white;
             border-radius: 25px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
             padding: 25px;
-            display: flex;
-            flex-direction: column;
         }
 
         .canvas-container {
@@ -417,9 +413,8 @@
             border-radius: 20px;
             padding: 20px;
             position: relative;
-            overflow: auto; /* Changed from 'hidden' to 'auto' for scrolling */
-            height: 700px; /* Increased height */
-            width: 100%;
+            overflow: hidden;
+            height: 600px;
             border: 3px solid #e0e7ff;
             box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
             cursor: grab;
@@ -431,11 +426,8 @@
 
         #powerCanvas {
             display: block;
-            background: #f0f4f8;
-            width: 2500px; /* Fixed larger width */
-            height: 1800px; /* Fixed larger height */
-            max-width: none;
             transform-origin: 0 0;
+            background: #f0f4f8;
         }
 
         .legend {
@@ -468,7 +460,6 @@
         .color-box.yellow { background: #ffff00; }
         .color-box.orange { background: #ff8000; }
         .color-box.red { background: #ff0000; }
-        .color-box.gray { background: #999999; } /* Added for neutral bus */
         .color-box.primary { background: #ff6600; }
         .color-box.secondary { background: #3366cc; }
 
@@ -537,12 +528,12 @@
         <div class="header">
             <h1>
                 <i class="fas fa-bolt"></i>
-                CSU-Carig - YOUR EXACT LAYOUT DESIGN
+                CSU-Carig - CONFIGURABLE LAYOUT DESIGN
                 <span class="badge">GROUP 7 DESIGN</span>
             </h1>
             <div class="subtitle">
                 <span><i class="fas fa-university"></i> Cagayan State University - Carig Campus</span>
-                <span><i class="fas fa-ruler"></i> Your Custom Positions</span>
+                <span><i class="fas fa-ruler"></i> Drag & Drop to Position Elements</span>
                 <span><i class="fas fa-calendar"></i> AY 2025-2026</span>
             </div>
         </div>
@@ -566,7 +557,7 @@
                             <i class="fas fa-bullseye fa-2x" style="color: #e74c3c;"></i>
                             <div>
                                 <strong style="font-size: 1.1em;">CENTRALIZED SYSTEM</strong><br>
-                                <small>1 Meter - 7 Buses (NEUTRAL Bus has NO LOAD)</small>
+                                <small>1 Meter - 7 Buses (incl. Neutral)</small>
                             </div>
                         </label>
                     </div>
@@ -692,16 +683,13 @@
                     <button class="canvas-btn" onclick="resetView()">
                         <i class="fas fa-expand"></i> Reset View
                     </button>
-                    <button class="canvas-btn" onclick="fitToView()">
-                        <i class="fas fa-arrows-alt"></i> Fit to View
-                    </button>
-                    <button class="canvas-btn special" onclick="loadYourLayout()">
-                        <i class="fas fa-star"></i> CURRENT LAYOUT
+                    <button class="canvas-btn special" onclick="arrangeNeatly()">
+                        <i class="fas fa-sitemap"></i> Default Layout
                     </button>
                     <span class="zoom-level" id="zoomLevel">100%</span>
                 </div>
                 <div class="canvas-container" id="canvasContainer">
-                    <canvas id="powerCanvas" width="2500" height="1800"></canvas>
+                    <canvas id="powerCanvas" width="2000" height="1500"></canvas>
                 </div>
 
                 <!-- Legend -->
@@ -721,10 +709,6 @@
                     <div class="legend-item">
                         <div class="color-box red"></div>
                         <span>Violation (<0.93)</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="color-box gray"></div>
-                        <span>Neutral Bus (No Load)</span>
                     </div>
                     <div class="legend-item">
                         <div class="line-sample"></div>
@@ -763,20 +747,20 @@
 
         const centBusNames = [
             "Bus 1", "Bus 2", "Bus 3", 
-            "Bus 4", "Bus 5", "Bus 6", "Bus 7 (NEUTRAL)"
+            "Bus 4", "Bus 5", "Bus 6", "Bus 7"
         ];
 
         let busNames = distBusNames;
 
         // EXACT KVA RATINGS FROM YOUR IMAGES
         const distBuses = [
-            { name: "Bus A1", kva: 100 },
+            { name: "Bus A1", kva: 100 }, // 300 kVA / 3
             { name: "Bus A2", kva: 100 },
             { name: "Bus A3", kva: 100 },
-            { name: "Bus B1", kva: 100 },
+            { name: "Bus B1", kva: 100 }, // 300 kVA / 3
             { name: "Bus B2", kva: 100 },
             { name: "Bus B3", kva: 100 },
-            { name: "Bus C1", kva: 50 },
+            { name: "Bus C1", kva: 50 },  // 150 kVA / 3
             { name: "Bus C2", kva: 50 },
             { name: "Bus C3", kva: 50 }
         ];
@@ -788,7 +772,7 @@
             { name: "Bus 4", kva: 100 },
             { name: "Bus 5", kva: 100 },
             { name: "Bus 6", kva: 50 },
-            { name: "Bus 7 (Neutral)", kva: 0 } // Neutral bus has 0 kVA
+            { name: "Bus 7 (Neutral)", kva: 0 }
         ];
 
         let Pbase = [];
@@ -805,58 +789,14 @@
         }
         updatePbase();
 
-        // Fixed positions (CAGELCO source and main transformer)
+        // POSITIONS - WILL BE CONFIGURABLE
         const sourcePos = { x: 100, y: 300 };
         const mainTxPos = { x: 250, y: 300 };
 
-        // ===========================================
-        // YOUR EXACT LAYOUT CONFIGURATIONS
-        // ===========================================
-        
-        // YOUR DISTRIBUTED LAYOUT - Bus positions
-        const yourDistBusPositions = [
-            { x: 564, y: 41 },   // Bus A1
-            { x: 565, y: 165 },  // Bus A2
-            { x: 566, y: 103 },  // Bus A3
-            { x: 567, y: 244 },  // Bus B1
-            { x: 567, y: 302 },  // Bus B2
-            { x: 569, y: 369 },  // Bus B3
-            { x: 567, y: 440 },  // Bus C1
-            { x: 567, y: 494 },  // Bus C2
-            { x: 566, y: 551 }   // Bus C3
-        ];
+        // BUS POSITIONS - CONFIGURABLE
+        let busPositions = [];
 
-        // YOUR DISTRIBUTED LAYOUT - Meter positions
-        const yourDistMeterPos = {
-            'METER 1 (300 kVA)': { x: 394, y: 91 },
-            'METER 2 (300 kVA)': { x: 395, y: 298 },
-            'METER 3 (150 kVA)': { x: 386, y: 497 }
-        };
-
-        // YOUR DISTRIBUTED LAYOUT - Transformer positions
-        const yourDistTxPos = [
-            { x: 250, y: 150 },  // Dist Tx for METER 1
-            { x: 250, y: 300 },  // Dist Tx for METER 2
-            { x: 250, y: 450 }   // Dist Tx for METER 3
-        ];
-
-        // YOUR CENTRALIZED LAYOUT - Bus positions (7 buses)
-        const yourCentBusPositions = [
-            { x: 606, y: 113 },  // Bus 1
-            { x: 604, y: 173 },  // Bus 2
-            { x: 601, y: 237 },  // Bus 3
-            { x: 601, y: 298 },  // Bus 4
-            { x: 601, y: 365 },  // Bus 5
-            { x: 606, y: 433 },  // Bus 6
-            { x: 606, y: 501 }   // Bus 7 (Neutral)
-        ];
-
-        // YOUR CENTRALIZED LAYOUT - Meter position
-        const yourCentMeterPos = {
-            'Catgelo 1 → (Met) 750 kVA': { x: 374, y: 296 }
-        };
-
-        // DISTRIBUTED DEFAULT LAYOUT (for reference)
+        // DISTRIBUTED DEFAULT LAYOUT (3 ROWS)
         const distDefaultBusPositions = [
             { x: 400, y: 150 },  // Bus A1
             { x: 600, y: 150 },  // Bus A2
@@ -869,7 +809,7 @@
             { x: 800, y: 450 }   // Bus C3
         ];
 
-        // CENTRALIZED DEFAULT LAYOUT (for reference)
+        // CENTRALIZED DEFAULT LAYOUT (STRAIGHT LINE)
         const centDefaultBusPositions = [
             { x: 300, y: 300 },  // Bus 1
             { x: 450, y: 300 },  // Bus 2
@@ -882,9 +822,9 @@
 
         // DISTRIBUTED DEFAULT METER POSITIONS
         const distDefaultMeterPos = {
-            'METER 1 (300 kVA)': { x: 400, y: 50 },
-            'METER 2 (300 kVA)': { x: 400, y: 250 },
-            'METER 3 (150 kVA)': { x: 400, y: 400 }
+            'Metro 1 (300 kVA)': { x: 400, y: 50 },
+            'Metro 2 (300 kVA)': { x: 400, y: 250 },
+            'Metro 3 (150 kVA)': { x: 400, y: 400 }
         };
 
         // CENTRALIZED DEFAULT METER POSITIONS
@@ -894,21 +834,43 @@
 
         // DISTRIBUTED DEFAULT TRANSFORMER POSITIONS
         const distDefaultTxPos = [
-            { x: 250, y: 150 },  // Dist Tx for METER 1
-            { x: 250, y: 300 },  // Dist Tx for METER 2
-            { x: 250, y: 450 }   // Dist Tx for METER 3
+            { x: 250, y: 150 },  // Dist Tx for Metro 1
+            { x: 250, y: 300 },  // Dist Tx for Metro 2
+            { x: 250, y: 450 }   // Dist Tx for Metro 3
         ];
 
-        // ===========================================
-        // VARIABLE DECLARATIONS - ALL AT THE TOP
-        // ===========================================
-        let busPositions = [];
+        // CURRENT POSITIONS (will be updated)
         let meterPos = {};
         let distTxPos = [];
-        let particles = [];
-        let busVoltages = [];
+
+        function setDefaultPositions() {
+            if (systemType === 'distributed') {
+                busPositions = JSON.parse(JSON.stringify(distDefaultBusPositions));
+                meterPos = JSON.parse(JSON.stringify(distDefaultMeterPos));
+                distTxPos = JSON.parse(JSON.stringify(distDefaultTxPos));
+            } else {
+                busPositions = JSON.parse(JSON.stringify(centDefaultBusPositions));
+                meterPos = JSON.parse(JSON.stringify(centDefaultMeterPos));
+                distTxPos = []; // No distribution transformers in centralized mode
+            }
+        }
+        setDefaultPositions();
+
+        // Saved layouts storage
         let savedDistLayout = null;
         let savedCentLayout = null;
+
+        // Bus voltages
+        let busVoltages = [];
+
+        function updateBusVoltagesArray() {
+            const size = systemType === 'distributed' ? 9 : 7;
+            busVoltages = new Array(size).fill(1.0);
+        }
+        updateBusVoltagesArray();
+
+        // Animation particles
+        let particles = [];
 
         // Interactive canvas variables
         let scale = 1.0;
@@ -922,66 +884,6 @@
         let selectedIndex = null;
         let selectedName = null;
         let dragOffsetX, dragOffsetY;
-
-        // ===========================================
-        // LAYOUT FUNCTIONS
-        // ===========================================
-        
-        function loadYourDistributedLayout() {
-            busPositions = JSON.parse(JSON.stringify(yourDistBusPositions));
-            meterPos = JSON.parse(JSON.stringify(yourDistMeterPos));
-            distTxPos = JSON.parse(JSON.stringify(yourDistTxPos));
-            if (typeof initParticles === 'function') {
-                initParticles();
-            }
-            if (typeof drawCanvas === 'function') {
-                drawCanvas();
-            }
-        }
-
-        function loadYourCentralizedLayout() {
-            busPositions = JSON.parse(JSON.stringify(yourCentBusPositions));
-            meterPos = JSON.parse(JSON.stringify(yourCentMeterPos));
-            distTxPos = [];
-            if (typeof initParticles === 'function') {
-                initParticles();
-            }
-            if (typeof drawCanvas === 'function') {
-                drawCanvas();
-            }
-        }
-
-        function loadYourLayout() {
-            if (systemType === 'distributed') {
-                loadYourDistributedLayout();
-            } else {
-                loadYourCentralizedLayout();
-            }
-        }
-
-        function setDefaultPositions() {
-            if (systemType === 'distributed') {
-                busPositions = JSON.parse(JSON.stringify(distDefaultBusPositions));
-                meterPos = JSON.parse(JSON.stringify(distDefaultMeterPos));
-                distTxPos = JSON.parse(JSON.stringify(distDefaultTxPos));
-            } else {
-                busPositions = JSON.parse(JSON.stringify(centDefaultBusPositions));
-                meterPos = JSON.parse(JSON.stringify(centDefaultMeterPos));
-                distTxPos = [];
-            }
-            if (typeof initParticles === 'function') {
-                initParticles();
-            }
-            if (typeof drawCanvas === 'function') {
-                drawCanvas();
-            }
-        }
-
-        function updateBusVoltagesArray() {
-            const size = systemType === 'distributed' ? 9 : 7;
-            busVoltages = new Array(size).fill(1.0);
-        }
-        updateBusVoltagesArray();
 
         // ===========================================
         // LAYOUT CONFIGURATION FUNCTIONS
@@ -1087,66 +989,54 @@
         }
 
         // ===========================================
-        // VOLTAGE CALCULATION - IMPROVED NEUTRAL HANDLING
+        // VOLTAGE CALCULATION
         // ===========================================
-        // ===========================================
-// FIXED VOLTAGE CALCULATION
-// Replace your existing calculateVoltages() function with this
-// ===========================================
         function calculateVoltages() {
             const size = systemType === 'distributed' ? 9 : 7;
             const voltages = new Array(size).fill(1.0);
             
             if (systemType === 'distributed') {
-            const loadDiff = loadMultiplier - 1.0;
-            const pfDiff = 0.95 - powerFactor;
-            
-            for (let i = 0; i < 9; i++) {
-                let baseVoltage = 0.975;
+                const loadDiff = loadMultiplier - 1.0;
+                const pfDiff = 0.95 - powerFactor;
                 
-                // Distance drop based on position in group
-                if (i % 3 === 0) baseVoltage -= 0.005;  // First in group
-                if (i % 3 === 1) baseVoltage -= 0.010;  // Second in group
-                if (i % 3 === 2) baseVoltage -= 0.015;  // Third in group
-                
-                // C group (buses 6-8) has lower capacity
-                if (i >= 6) baseVoltage -= 0.010;
-                
-                // Apply load multiplier effect
-                if (loadMultiplier > 1.0) {
-                    baseVoltage -= (loadMultiplier - 1.0) * 0.04;
-                } else if (loadMultiplier < 1.0) {
-                    baseVoltage += (1.0 - loadMultiplier) * 0.03;
+                for (let i = 0; i < 9; i++) {
+                    let baseVoltage = 0.975;
+                    
+                    // Distance drop (further buses have lower voltage)
+                    if (i % 3 === 0) baseVoltage -= 0.005;
+                    if (i % 3 === 1) baseVoltage -= 0.010;
+                    if (i % 3 === 2) baseVoltage -= 0.015;
+                    
+                    // Load effect
+                    if (loadDiff > 0) {
+                        baseVoltage -= loadDiff * 0.04;
+                    } else if (loadDiff < 0) {
+                        baseVoltage += Math.abs(loadDiff) * 0.03;
+                    }
+                    
+                    // PF effect
+                    baseVoltage -= pfDiff * 0.03;
+                    
+                    voltages[i] = Math.max(0.75, Math.min(1.02, baseVoltage));
                 }
                 
-                // Apply power factor effect
-                const pfEffect = (0.95 - powerFactor) * 0.03;
-                baseVoltage -= pfEffect;
-                
-                voltages[i] = Math.max(0.85, Math.min(1.02, baseVoltage));
-            }
-        } else {
+            } else {
                 const loadDiff = loadMultiplier - 1.0;
                 const pfDiff = 0.95 - powerFactor;
                 
                 for (let i = 0; i < 7; i++) {
                     if (i === 6) {
-                        // NEUTRAL BUS - no load, voltage ~0
                         voltages[i] = 0.01;
                     } else {
-                        // Base voltage decreases with distance from source
                         let baseVoltage = 0.965 - (i * 0.012);
                         
-                        // Apply load multiplier effect (STRONGER in centralized)
-                        if (loadMultiplier > 1.0) {
-                            baseVoltage -= (loadMultiplier - 1.0) * 0.06;
-                        } else if (loadMultiplier < 1.0) {
-                            baseVoltage += (1.0 - loadMultiplier) * 0.02;
+                        if (loadDiff > 0) {
+                            baseVoltage -= loadDiff * 0.06;
+                        } else if (loadDiff < 0) {
+                            baseVoltage += Math.abs(loadDiff) * 0.02;
                         }
                         
-                        // Apply power factor effect (STRONGER in centralized)
-                        const pfEffect = (0.95 - powerFactor) * 0.05;
-                        baseVoltage -= pfEffect;
+                        baseVoltage -= pfDiff * 0.05;
                         
                         voltages[i] = Math.max(0.75, Math.min(1.02, baseVoltage));
                     }
@@ -1156,24 +1046,17 @@
             return voltages;
         }
 
-        // Get color based on voltage - IMPROVED FOR NEUTRAL BUS
-        function getVoltageColor(voltage, isNeutral = false) {
-            if (isNeutral) return '#999999'; // Gray for neutral bus
+        // Get color based on voltage
+        function getVoltageColor(voltage) {
             if (voltage >= 0.97) return '#00ff00';
             if (voltage >= 0.95) return '#ffff00';
             if (voltage >= 0.93) return '#ff8000';
             return '#ff0000';
         }
 
-        // Calculate load factor - EXCLUDE NEUTRAL BUS
+        // Calculate load factor
         function calculateLoadFactor() {
-            // Filter out neutral bus (index 6) for centralized system
-            let activePbase = [...Pbase];
-            if (systemType === 'centralized') {
-                activePbase = Pbase.filter((_, index) => index !== 6);
-            }
-            
-            const totalLoad = activePbase.reduce((a, b) => a + b, 0) * loadMultiplier;
+            const totalLoad = Pbase.reduce((a, b) => a + b, 0) * loadMultiplier;
             const peakFromHistorical = 24.2 * 3 * loadMultiplier;
             
             return {
@@ -1187,13 +1070,7 @@
         // Update displays
         function updateLoadMetrics() {
             const lf = calculateLoadFactor();
-            
-            // Calculate total load excluding neutral
-            let activePbase = [...Pbase];
-            if (systemType === 'centralized') {
-                activePbase = Pbase.filter((_, index) => index !== 6);
-            }
-            const totalLoad = activePbase.reduce((a, b) => a + b, 0) * loadMultiplier;
+            const totalLoad = Pbase.reduce((a, b) => a + b, 0) * loadMultiplier;
             const totalLoss = totalLoad * (systemType === 'distributed' ? 0.015 : 0.03);
 
             const metricsHtml = `
@@ -1222,13 +1099,7 @@
         function updateDataDisplay() {
             busVoltages = calculateVoltages();
             const currentBusNames = systemType === 'distributed' ? distBusNames : centBusNames;
-            
-            // Calculate total load excluding neutral
-            let activePbase = [...Pbase];
-            if (systemType === 'centralized') {
-                activePbase = Pbase.filter((_, index) => index !== 6);
-            }
-            const totalLoad = activePbase.reduce((a, b) => a + b, 0) * loadMultiplier;
+            const totalLoad = Pbase.reduce((a, b) => a + b, 0) * loadMultiplier;
             
             let html = `
                 <span style="color: #ffd700;">╔════════════════════════════════════╗</span><br>
@@ -1238,12 +1109,12 @@
             `;
             
             for (let i = 0; i < busVoltages.length; i++) {
+                const status = busVoltages[i] >= 0.97 ? '✓' : (busVoltages[i] >= 0.95 ? '⚠️' : '❌');
+                const drop = ((1.0 - busVoltages[i]) * 100).toFixed(2);
+                
                 if (systemType === 'centralized' && i === 6) {
-                    // Neutral bus - special display
-                    html += `⚡ ${currentBusNames[i].padEnd(15)}: ${busVoltages[i].toFixed(4)} pu (NO LOAD)<br>`;
+                    html += `⚡ ${currentBusNames[i].padEnd(15)}: ${busVoltages[i].toFixed(4)} pu (NEUTRAL)<br>`;
                 } else {
-                    const status = busVoltages[i] >= 0.97 ? '✓' : (busVoltages[i] >= 0.95 ? '⚠️' : '❌');
-                    const drop = ((1.0 - busVoltages[i]) * 100).toFixed(2);
                     html += `${status} ${currentBusNames[i].padEnd(15)}: ${busVoltages[i].toFixed(4)} pu (drop ${drop}%)<br>`;
                 }
             }
@@ -1253,23 +1124,15 @@
             html += `<span style="color: #3498db;">Power Factor:</span> ${powerFactor.toFixed(2)}<br>`;
             html += `<span style="color: #3498db;">Mode:</span> ${systemType === 'distributed' ? 'Distributed (9 buses)' : 'Centralized (7 buses)'}<br>`;
             html += `<span style="color: #3498db;">System Capacity:</span> 750 kVA (Meters: 300+300+150 kVA)<br>`;
-            html += `<span style="color: #ffd700;">Note:</span> Neutral bus has NO load<br>`;
             
             document.getElementById('dataDisplay').innerHTML = html;
         }
 
-        // Update compliance display - EXCLUDE NEUTRAL FROM WORST CASE
+        // Update compliance display
         function updateComplianceDisplay() {
             busVoltages = calculateVoltages();
             const currentBusNames = systemType === 'distributed' ? distBusNames : centBusNames;
-            
-            // For centralized, exclude neutral from worst case calculation
-            let voltagesToCheck = [...busVoltages];
-            if (systemType === 'centralized') {
-                voltagesToCheck = busVoltages.filter((_, index) => index !== 6);
-            }
-            
-            const worstV = Math.min(...voltagesToCheck);
+            const worstV = Math.min(...busVoltages);
             const worstIdx = busVoltages.indexOf(worstV);
             const dropPercent = (1.0 - worstV) * 100;
             const isCompliant = worstV >= 0.95;
@@ -1290,10 +1153,6 @@
             html += `<span style="color: #ffd700;">Current Worst Drop:</span> <span style="color: ${isCompliant ? '#27ae60' : '#e74c3c'};">${dropPercent.toFixed(2)}%</span><br>`;
             html += `<span style="color: #ffd700;">Worst Location:</span> ${currentBusNames[worstIdx]}<br>`;
             html += `<span style="color: #ffd700;">Voltage:</span> ${worstV.toFixed(4)} pu<br>`;
-            
-            if (systemType === 'centralized') {
-                html += `<span style="color: #ffd700;">Note:</span> Neutral bus excluded from PEC compliance<br>`;
-            }
             
             html += `<br><span style="color: #ffd700;">RECOMMENDATION:</span><br>`;
             
@@ -1362,33 +1221,33 @@
                     addFlow(sourcePos, distTxPos[2], 2, true);
                     
                     // Transformers to meters
-                    if (meterPos['METER 1 (300 kVA)']) {
-                        addFlow(distTxPos[0], meterPos['METER 1 (300 kVA)'], 2, true);
+                    if (meterPos['Metro 1 (300 kVA)']) {
+                        addFlow(distTxPos[0], meterPos['Metro 1 (300 kVA)'], 2, true);
                     }
-                    if (meterPos['METER 2 (300 kVA)']) {
-                        addFlow(distTxPos[1], meterPos['METER 2 (300 kVA)'], 2, true);
+                    if (meterPos['Metro 2 (300 kVA)']) {
+                        addFlow(distTxPos[1], meterPos['Metro 2 (300 kVA)'], 2, true);
                     }
-                    if (meterPos['METER 3 (150 kVA)']) {
-                        addFlow(distTxPos[2], meterPos['METER 3 (150 kVA)'], 2, true);
+                    if (meterPos['Metro 3 (150 kVA)']) {
+                        addFlow(distTxPos[2], meterPos['Metro 3 (150 kVA)'], 2, true);
                     }
                 }
                 
                 // Meter A to its 3 buses (indices 0-2)
-                if (meterPos['METER 1 (300 kVA)']) {
+                if (meterPos['Metro 1 (300 kVA)']) {
                     for (let i = 0; i <= 2; i++) {
-                        addFlow(meterPos['METER 1 (300 kVA)'], busPositions[i], 1, true);
+                        addFlow(meterPos['Metro 1 (300 kVA)'], busPositions[i], 1, true);
                     }
                 }
                 // Meter B to its 3 buses (indices 3-5)
-                if (meterPos['METER 2 (300 kVA)']) {
+                if (meterPos['Metro 2 (300 kVA)']) {
                     for (let i = 3; i <= 5; i++) {
-                        addFlow(meterPos['METER 2 (300 kVA)'], busPositions[i], 1, true);
+                        addFlow(meterPos['Metro 2 (300 kVA)'], busPositions[i], 1, true);
                     }
                 }
                 // Meter C to its 3 buses (indices 6-8)
-                if (meterPos['METER 3 (150 kVA)']) {
+                if (meterPos['Metro 3 (150 kVA)']) {
                     for (let i = 6; i <= 8; i++) {
-                        addFlow(meterPos['METER 3 (150 kVA)'], busPositions[i], 1, true);
+                        addFlow(meterPos['Metro 3 (150 kVA)'], busPositions[i], 1, true);
                     }
                 }
                 
@@ -1449,32 +1308,32 @@
                 }
                 
                 // Transformers to meters
-                if (meterPos['METER 1 (300 kVA)'] && distTxPos[0]) {
-                    drawLine(ctx, distTxPos[0], meterPos['METER 1 (300 kVA)'], false, '#3366cc', 2.5, true);
+                if (meterPos['Metro 1 (300 kVA)'] && distTxPos[0]) {
+                    drawLine(ctx, distTxPos[0], meterPos['Metro 1 (300 kVA)'], false, '#3366cc', 2.5, true);
                 }
-                if (meterPos['METER 2 (300 kVA)'] && distTxPos[1]) {
-                    drawLine(ctx, distTxPos[1], meterPos['METER 2 (300 kVA)'], false, '#3366cc', 2.5, true);
+                if (meterPos['Metro 2 (300 kVA)'] && distTxPos[1]) {
+                    drawLine(ctx, distTxPos[1], meterPos['Metro 2 (300 kVA)'], false, '#3366cc', 2.5, true);
                 }
-                if (meterPos['METER 3 (150 kVA)'] && distTxPos[2]) {
-                    drawLine(ctx, distTxPos[2], meterPos['METER 3 (150 kVA)'], false, '#3366cc', 2.5, true);
+                if (meterPos['Metro 3 (150 kVA)'] && distTxPos[2]) {
+                    drawLine(ctx, distTxPos[2], meterPos['Metro 3 (150 kVA)'], false, '#3366cc', 2.5, true);
                 }
                 
                 // Meter A to its 3 buses (indices 0-2)
-                if (meterPos['METER 1 (300 kVA)']) {
+                if (meterPos['Metro 1 (300 kVA)']) {
                     for (let i = 0; i <= 2; i++) {
-                        drawLine(ctx, meterPos['METER 1 (300 kVA)'], busPositions[i], true, '#3366cc', 2, true);
+                        drawLine(ctx, meterPos['Metro 1 (300 kVA)'], busPositions[i], true, '#3366cc', 2, true);
                     }
                 }
                 // Meter B to its 3 buses (indices 3-5)
-                if (meterPos['METER 2 (300 kVA)']) {
+                if (meterPos['Metro 2 (300 kVA)']) {
                     for (let i = 3; i <= 5; i++) {
-                        drawLine(ctx, meterPos['METER 2 (300 kVA)'], busPositions[i], true, '#3366cc', 2, true);
+                        drawLine(ctx, meterPos['Metro 2 (300 kVA)'], busPositions[i], true, '#3366cc', 2, true);
                     }
                 }
                 // Meter C to its 3 buses (indices 6-8)
-                if (meterPos['METER 3 (150 kVA)']) {
+                if (meterPos['Metro 3 (150 kVA)']) {
                     for (let i = 6; i <= 8; i++) {
-                        drawLine(ctx, meterPos['METER 3 (150 kVA)'], busPositions[i], true, '#3366cc', 2, true);
+                        drawLine(ctx, meterPos['Metro 3 (150 kVA)'], busPositions[i], true, '#3366cc', 2, true);
                     }
                 }
                 
@@ -1601,9 +1460,9 @@
                 
                 // Shorten name for display
                 let displayName = name;
-                if (name.includes('METER 1')) displayName = 'METER 1';
-                if (name.includes('METER 2')) displayName = 'METER 2';
-                if (name.includes('METER 3')) displayName = 'METER 3';
+                if (name.includes('Metro 1')) displayName = 'Metro 1';
+                if (name.includes('Metro 2')) displayName = 'Metro 2';
+                if (name.includes('Metro 3')) displayName = 'Metro 3';
                 if (name.includes('Catgelo')) displayName = 'Catgelo 1 → (Met)';
                 
                 ctx.fillText(displayName, pos.x, pos.y - 3);
@@ -1623,11 +1482,10 @@
                 }
             }
             
-            // Draw all buses - IMPROVED NEUTRAL BUS HANDLING
+            // Draw all buses
             for (let i = 0; i < busPositions.length; i++) {
                 const v = busVoltages[i] || 1.0;
-                const isNeutral = (systemType === 'centralized' && i === 6);
-                const color = getVoltageColor(v, isNeutral);
+                const color = getVoltageColor(v);
                 const pos = busPositions[i];
                 
                 ctx.fillStyle = color;
@@ -1637,19 +1495,15 @@
                 ctx.strokeRect(pos.x - 30, pos.y - 15, 60, 30);
                 
                 ctx.font = 'bold 9px Arial';
-                ctx.fillStyle = isNeutral ? '#ffffff' : '#000'; // White text on gray background
+                ctx.fillStyle = '#000';
                 ctx.textAlign = 'center';
                 
                 // Use currentBusNames
                 ctx.fillText(currentBusNames[i], pos.x, pos.y - 2);
                 
                 ctx.font = 'bold 7px monospace';
-                ctx.fillStyle = isNeutral ? '#ffffff' : '#000';
-                if (isNeutral) {
-                    ctx.fillText('NEUTRAL', pos.x, pos.y + 10);
-                } else {
-                    ctx.fillText(v.toFixed(3) + ' pu', pos.x, pos.y + 10);
-                }
+                ctx.fillStyle = '#000';
+                ctx.fillText(v.toFixed(3) + ' pu', pos.x, pos.y + 10);
             }
             
             // Highlight selected element
@@ -1720,57 +1574,8 @@
             drawCanvas();
         }
 
-        function fitToView() {
-            // Find the bounds of all elements
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            
-            const allElements = [
-                sourcePos,
-                mainTxPos,
-                ...busPositions,
-                ...Object.values(meterPos),
-                ...distTxPos
-            ];
-            
-            allElements.forEach(el => {
-                if (el && el.x) {
-                    minX = Math.min(minX, el.x);
-                    maxX = Math.max(maxX, el.x);
-                }
-                if (el && el.y) {
-                    minY = Math.min(minY, el.y);
-                    maxY = Math.max(maxY, el.y);
-                }
-            });
-            
-            // Add padding
-            minX -= 100;
-            minY -= 100;
-            maxX += 100;
-            maxY += 100;
-            
-            // Calculate scale to fit
-            const container = document.getElementById('canvasContainer');
-            const containerWidth = container.clientWidth - 40;
-            const containerHeight = container.clientHeight - 40;
-            
-            const width = maxX - minX;
-            const height = maxY - minY;
-            
-            const scaleX = containerWidth / width;
-            const scaleY = containerHeight / height;
-            scale = Math.min(scaleX, scaleY, 1.5); // Cap at 1.5x
-            
-            // Center the view
-            offsetX = (containerWidth/2 - (minX + maxX)/2 * scale);
-            offsetY = (containerHeight/2 - (minY + maxY)/2 * scale);
-            
-            document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
-            drawCanvas();
-        }
-
         function arrangeNeatly() {
-            // Reset to default positions (not your custom ones)
+            // Reset to default positions
             setDefaultPositions();
             initParticles();
             drawCanvas();
@@ -1804,9 +1609,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('canvasContainer');
             const canvas = document.getElementById('powerCanvas');
-            
-            // Initialize with YOUR layout after all functions are defined
-            loadYourDistributedLayout();
             
             container.addEventListener('mousedown', function(e) {
                 e.preventDefault();
@@ -1922,11 +1724,22 @@
             busNames = type === 'distributed' ? distBusNames : centBusNames;
             updatePbase();
             
-            // Load the appropriate YOUR layout
             if (type === 'distributed') {
-                loadYourDistributedLayout();
+                if (savedDistLayout) {
+                    busPositions = JSON.parse(JSON.stringify(savedDistLayout.busPositions));
+                    meterPos = JSON.parse(JSON.stringify(savedDistLayout.meterPos));
+                    distTxPos = JSON.parse(JSON.stringify(savedDistLayout.distTxPos));
+                } else {
+                    setDefaultPositions();
+                }
             } else {
-                loadYourCentralizedLayout();
+                if (savedCentLayout) {
+                    busPositions = JSON.parse(JSON.stringify(savedCentLayout.busPositions));
+                    meterPos = JSON.parse(JSON.stringify(savedCentLayout.meterPos));
+                    distTxPos = [];
+                } else {
+                    setDefaultPositions();
+                }
             }
             
             updateBusVoltagesArray();
@@ -1970,10 +1783,10 @@
             systemType = 'distributed';
             busNames = distBusNames;
             
-            // Load YOUR distributed layout
-            loadYourDistributedLayout();
+            setDefaultPositions();
             updatePbase();
             updateBusVoltagesArray();
+            initParticles();
             
             document.getElementById('loadSlider').value = 1.0;
             document.getElementById('pfSlider').value = 0.95;
@@ -2000,7 +1813,6 @@
         window.zoomIn = zoomIn;
         window.zoomOut = zoomOut;
         window.resetView = resetView;
-        window.fitToView = fitToView;
         window.arrangeNeatly = arrangeNeatly;
         window.saveDistributedLayout = saveDistributedLayout;
         window.saveCentralizedLayout = saveCentralizedLayout;
@@ -2009,7 +1821,6 @@
         window.exportCurrentLayout = exportCurrentLayout;
         window.importLayout = importLayout;
         window.copyToClipboard = copyToClipboard;
-        window.loadYourLayout = loadYourLayout;
     </script>
 </body>
 </html>

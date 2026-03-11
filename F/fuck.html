@@ -1099,56 +1099,81 @@
        function calculateVoltages() {
     const size = systemType === 'distributed' ? 9 : 7;
     const voltages = new Array(size).fill(1.0);
+    const baseVoltage = 1.0;
+    const Vbase = 150; // kV
+    const Vphase = Vbase / Math.sqrt(3); // 86.6 kV phase-to-neutral
     
     if (systemType === 'distributed') {
-        // Simple direct formula that responds to LM and PF
-        for (let i = 0; i < 9; i++) {
-            // Group A (buses 0-2) - highest drop
-            if (i < 3) {
-                // Base voltage decreases with distance
-                let baseDrop = 0.98 - (i * 0.01);
-                // Load effect - directly multiply by LM
-                let loadEffect = (loadMultiplier - 1.0) * 0.05;
-                // PF effect - lower PF = lower voltage
-                let pfEffect = (0.95 - powerFactor) * 0.1;
-                
-                voltages[i] = baseDrop - loadEffect - pfEffect;
-            }
-            // Group B (buses 3-5) - medium drop
-            else if (i < 6) {
-                let baseDrop = 0.99 - ((i-3) * 0.008);
-                let loadEffect = (loadMultiplier - 1.0) * 0.04;
-                let pfEffect = (0.95 - powerFactor) * 0.08;
-                
-                voltages[i] = baseDrop - loadEffect - pfEffect;
-            }
-            // Group C (buses 6-8) - lowest drop
-            else {
-                let baseDrop = 0.995 - ((i-6) * 0.005);
-                let loadEffect = (loadMultiplier - 1.0) * 0.02;
-                let pfEffect = (0.95 - powerFactor) * 0.05;
-                
-                voltages[i] = baseDrop - loadEffect - pfEffect;
-            }
+        // ===== METER 1 GROUP (Buses 0-2) - 100 kVA each, Z=0.0487Ω =====
+        const z1 = 0.0487; // Pre-calculated impedance
+        const Pbase_groupA = 100; // kW per bus
+        const I_base = (Pbase_groupA * 1000) / (Vphase * 1000); // Current in Amperes at 1.0 load
+        
+        for (let i = 0; i < 3; i++) {
+            const distanceFactor = (i + 1) * 0.5; // 0.5, 1.0, 1.5
+            // Current scales with load and PF
+            const I_actual = I_base * loadMultiplier / powerFactor;
+            // Voltage drop in Volts
+            const voltageDrop_V = I_actual * z1 * distanceFactor;
+            // Convert to per unit (divide by phase voltage in volts)
+            const voltageDrop_pu = voltageDrop_V / (Vphase * 1000);
             
-            // Clamp to realistic range
-            voltages[i] = Math.max(0.75, Math.min(1.02, voltages[i]));
+            voltages[i] = baseVoltage - voltageDrop_pu;
+            voltages[i] = Math.min(1.02, Math.max(0.60, voltages[i]));
         }
+        
+        // ===== METER 2 GROUP (Buses 3-5) - 100 kVA each, Z=0.0233Ω =====
+        const z2 = 0.0233;
+        const I_base2 = (100 * 1000) / (Vphase * 1000);
+        
+        for (let i = 3; i < 6; i++) {
+            const distanceFactor = ((i-2) + 1) * 0.5;
+            const I_actual = I_base2 * loadMultiplier / powerFactor;
+            const voltageDrop_V = I_actual * z2 * distanceFactor;
+            const voltageDrop_pu = voltageDrop_V / (Vphase * 1000);
+            
+            voltages[i] = baseVoltage - voltageDrop_pu;
+            voltages[i] = Math.min(1.02, Math.max(0.60, voltages[i]));
+        }
+        
+        // ===== METER 3 GROUP (Buses 6-8) - 50 kVA each, Z=0.0047Ω =====
+        const z3 = 0.0047;
+        const I_base3 = (50 * 1000) / (Vphase * 1000);
+        
+        for (let i = 6; i < 9; i++) {
+            const distanceFactor = ((i-5) + 1) * 0.5;
+            const I_actual = I_base3 * loadMultiplier / powerFactor;
+            const voltageDrop_V = I_actual * z3 * distanceFactor;
+            const voltageDrop_pu = voltageDrop_V / (Vphase * 1000);
+            
+            voltages[i] = baseVoltage - voltageDrop_pu;
+            voltages[i] = Math.min(1.02, Math.max(0.60, voltages[i]));
+        }
+        
     } else {
-        // CENTRALIZED
+        // ===== CENTRALIZED SYSTEM =====
+        const zCent = 0.0675; // Pre-calculated impedance
+        // Total load varies by bus position
+        const busLoads = [150, 150, 150, 100, 100, 50]; // kVA per bus
+        
         for (let i = 0; i < 7; i++) {
             if (i === 6) {
                 voltages[i] = 0.01; // Neutral
             } else {
-                // Progressive drop - each bus has lower voltage
-                let baseDrop = 0.98 - (i * 0.015);
-                // Load effect - stronger for centralized
-                let loadEffect = (loadMultiplier - 1.0) * 0.08;
-                // PF effect - stronger for centralized
-                let pfEffect = (0.95 - powerFactor) * 0.15;
+                // Cumulative load increases with distance
+                let cumulativeLoad = 0;
+                for (let j = i; j < 6; j++) {
+                    cumulativeLoad += busLoads[j];
+                }
                 
-                voltages[i] = baseDrop - loadEffect - pfEffect;
-                voltages[i] = Math.max(0.75, Math.min(1.02, voltages[i]));
+                const I_base = (cumulativeLoad * 1000) / (Vphase * 1000);
+                const I_actual = I_base * loadMultiplier / powerFactor;
+                const distanceFactor = (i + 1) * 0.3;
+                const voltageDrop_V = I_actual * zCent * distanceFactor;
+                const voltageDrop_pu = voltageDrop_V / (Vphase * 1000);
+                
+                voltages[i] = baseVoltage - voltageDrop_pu;
+                voltages[i] = Math.min(1.02, Math.max(0.60, voltages[i]));
             }
         }
     }

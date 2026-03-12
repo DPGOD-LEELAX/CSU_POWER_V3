@@ -736,10 +736,9 @@
 
                 <!-- Legend -->
                 <div class="legend">
-                    <div class="legend-item"><div class="color-box green"></div><span>Good (≥0.97 pu)</span></div>
-                    <div class="legend-item"><div class="color-box yellow"></div><span>Warning (0.95-0.97)</span></div>
-                    <div class="legend-item"><div class="color-box orange"></div><span>Critical (0.93-0.95)</span></div>
-                    <div class="legend-item"><div class="color-box red"></div><span>Violation (<0.93)</span></div>
+                    <div class="legend-item"><div class="color-box green"></div><span>Good (≤3% drop, ≥0.97 pu)</span></div>
+                    <div class="legend-item"><div class="color-box yellow"></div><span>Warning (3-5% drop, 0.95-0.97 pu)</span></div>
+                    <div class="legend-item"><div class="color-box red"></div><span>Violation (>5% drop, <0.95 pu)</span></div>
                     <div class="legend-item"><div class="color-box gray"></div><span>Neutral Bus</span></div>
                 </div>
             </div>
@@ -1350,37 +1349,45 @@
 }
 
         function updateComplianceDisplay() {
-            const voltages = loadFlowResults.voltages;
-            const currentBusNames = systemType === 'distributed' ? distBusNames : centBusNames;
-            
-            let voltagesToCheck = [...voltages];
-            if (systemType === 'centralized') {
-                voltagesToCheck = voltages.filter((_, index) => index !== 6);
-            }
-            
-            const worstV = Math.min(...voltagesToCheck);
-            const worstIdx = voltages.indexOf(worstV);
-            const dropPercent = (1.0 - worstV) * 100;
-            const isCompliant = worstV >= 0.95;
-            
-            let html = `
-                <span style="color: #ffd700;">⚡ PEC 2025 VOLTAGE DROP ANALYSIS</span><br>
-                <span style="color: #ffd700;">──────────────────────────────</span><br><br>
-            `;
-            
-            if (isCompliant) {
-                html += `<span style="color: #27ae60;">✓ PEC COMPLIANT</span><br>`;
-            } else {
-                html += `<span style="color: #e74c3c;">❌ PEC VIOLATION</span><br>`;
-            }
-            
-            html += `<br>Maximum Allowable Drop: 5.00%<br>`;
-            html += `Current Worst Drop: <span style="color: ${isCompliant ? '#27ae60' : '#e74c3c'};">${dropPercent.toFixed(2)}%</span><br>`;
-            html += `Worst Location: ${currentBusNames[worstIdx]}<br>`;
-            html += `Voltage: ${worstV.toFixed(4)} pu (${(worstV*100).toFixed(2)}%)<br>`;
-            
-            document.getElementById('complianceDisplay').innerHTML = html;
-        }
+    const voltages = loadFlowResults.voltages;
+    const currentBusNames = systemType === 'distributed' ? distBusNames : centBusNames;
+    
+    let voltagesToCheck = [...voltages];
+    if (systemType === 'centralized') {
+        voltagesToCheck = voltages.filter((_, index) => index !== 6);
+    }
+    
+    const worstV = Math.min(...voltagesToCheck);
+    const worstIdx = voltages.indexOf(worstV);
+    const dropPercent = (1.0 - worstV) * 100;
+    
+    // FIX THESE THRESHOLDS:
+    const isCompliant = worstV >= 0.95;  // 5% drop limit
+    const isCritical = worstV >= 0.93 && worstV < 0.95;  // 5-7% drop
+    const isViolation = worstV < 0.93;   // >7% drop
+    
+    let html = `
+        <span style="color: #ffd700;">⚡ PEC 2025 VOLTAGE DROP ANALYSIS</span><br>
+        <span style="color: #ffd700;">──────────────────────────────</span><br><br>
+    `;
+    
+    if (isCompliant) {
+        html += `<span style="color: #27ae60;">✓ PEC COMPLIANT</span><br>`;
+    } else if (isCritical) {
+        html += `<span style="color: #ff8000;">🟠 CRITICAL - Near Violation</span><br>`;
+    } else {
+        html += `<span style="color: #e74c3c;">❌ PEC VIOLATION</span><br>`;
+    }
+    
+    html += `<br>Maximum Allowable Drop: 5.00%<br>`;
+    html += `Current Worst Drop: <span style="color: ${
+        worstV >= 0.95 ? '#27ae60' : (worstV >= 0.93 ? '#ff8000' : '#e74c3c')
+    };">${dropPercent.toFixed(2)}%</span><br>`;
+    html += `Worst Location: ${currentBusNames[worstIdx]}<br>`;
+    html += `Voltage: ${worstV.toFixed(4)} pu (${(worstV*100).toFixed(2)}%)<br>`;
+    
+    document.getElementById('complianceDisplay').innerHTML = html;
+}
 
         // Tab switching
         function switchTab(tabName) {
@@ -1395,11 +1402,10 @@
 
         // Canvas drawing functions
         function getVoltageColor(voltage, isNeutral = false) {
-            if (isNeutral) return '#999999';
-            if (voltage >= 0.97) return '#00ff00';
-            if (voltage >= 0.95) return '#ffff00';
-            if (voltage >= 0.93) return '#ff8000';
-            return '#ff0000';
+            if (isNeutral) return '#999999';           // GRAY
+            if (voltage >= 0.97) return '#00ff00';     // GREEN - Good (≤3% drop)
+            if (voltage >= 0.95) return '#ffff00';     // YELLOW - Warning (3-5% drop)
+            return '#ff0000';                           // RED - Violation (>5% drop)
         }
 
         function drawLine(ctx, a, b, dashed = false, color = '#e67e22', width = 3, active = true) {

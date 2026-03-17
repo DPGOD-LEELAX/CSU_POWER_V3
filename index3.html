@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSU-Carig Power Flow - WITH LOSS ANALYSIS</title>
+    <title>CSU-Carig Power Flow - WITH IMPEDANCE MULTIPLIER</title>
     <style>
         * {
             margin: 0;
@@ -79,6 +79,8 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
             padding: 25px;
             height: fit-content;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .control-section {
@@ -523,7 +525,6 @@
             transform-origin: 0 0;
         }
 
-        /* NEW: Image panel below canvas */
         .image-panel {
             margin-top: 20px;
             padding: 15px;
@@ -632,6 +633,20 @@
         .loss-high { color: #ff0000; font-weight: bold; }
         .loss-medium { color: #ff8000; font-weight: bold; }
         .loss-low { color: #ffff00; font-weight: bold; }
+
+        .impedance-note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 0.85em;
+            color: #856404;
+        }
+
+        .impedance-note i {
+            margin-right: 5px;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -640,7 +655,7 @@
         <div class="header">
             <h1>
                 <i class="fas fa-bolt"></i>
-                CSU-Carig Power Flow - WITH LOSS ANALYSIS
+                CSU-Carig Power Flow - WITH IMPEDANCE MULTIPLIER
                 <span class="badge">GROUP 7</span>
                 <span class="base-kv-badge">13.7 kV Base</span>
             </h1>
@@ -720,6 +735,22 @@
                         </div>
                     </div>
 
+                    <!-- NEW: IMPEDANCE MULTIPLIER -->
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span><i class="fas fa-bolt"></i> Impedance Multiplier (Z)</span>
+                            <span class="value-badge" id="zMultiplierValue">1.0x</span>
+                        </div>
+                        <input type="range" class="slider" id="zMultiplierSlider" min="0.5" max="3.0" step="0.1" value="1.0" oninput="updateZMultiplier(this.value)" style="background: #ffd700;">
+                        <small style="color: #666;">Scales ALL line impedances (R and X) - affects voltage drop</small>
+                    </div>
+
+                    <div class="impedance-note">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Z = R + jX</strong> (Impedance) - These are the line values in ohms. 
+                        Load multiplier scales POWER, Impedance multiplier scales Z.
+                    </div>
+
                     <div class="slider-group">
                         <div class="slider-label">
                             <span><i class="fas fa-wave-square"></i> Power Factor</span>
@@ -728,7 +759,7 @@
                         <input type="range" class="slider" id="pfSlider" min="0.5" max="1.0" step="0.01" value="0.95" oninput="updatePF(this.value)">
                     </div>
 
-                    <!-- NEW: Harmonic Distortion Slider -->
+                    <!-- Harmonic Distortion Slider -->
                     <div class="slider-group">
                         <div class="slider-label">
                             <span><i class="fas fa-chart-line"></i> THD % (Harmonics)</span>
@@ -808,7 +839,7 @@
                     </div>
                 </div>
 
-                <!-- Load Flow Results Tabs - ADDED LOSSES TAB -->
+                <!-- Load Flow Results Tabs -->
                 <div class="data-panel">
                     <h4><i class="fas fa-chart-bar"></i> BFS LOAD FLOW RESULTS</h4>
                     
@@ -838,7 +869,6 @@
                         </div>
                     </div>
                     
-                    <!-- NEW: Losses Tab -->
                     <div id="losses-tab" class="tab-content">
                         <div class="data-content" id="lossDisplay">
                             Computing losses...
@@ -896,9 +926,9 @@
                     <canvas id="powerCanvas" width="3000" height="1800"></canvas>
                 </div>
 
-                <!-- NEW: Image Panel below canvas for 1.jpg -->
+                <!-- Image Panel below canvas for 1.jpg -->
                 <div class="image-panel">
-                    <img src="images/1.jpg" alt="Loss Analysis Diagram" id="lossImage">
+                    <img src="images/1.jpg" alt="Loss Analysis Diagram" id="lossImage" onerror="this.style.display='none'">
                     <div class="image-caption">
                         <i class="fas fa-image"></i> Loss Analysis - Copper, Core, and Harmonic Losses
                     </div>
@@ -980,7 +1010,8 @@
         let animationRunning = true;
         let loadMultiplier = 1.0;
         let powerFactor = 0.95;
-        let thdPercent = 3.0; // NEW: Total Harmonic Distortion %
+        let thdPercent = 3.0;
+        let zMultiplier = 1.0; // NEW: Impedance multiplier
         let animationSpeed = 1.0;
         let animationFrame;
         
@@ -1002,16 +1033,19 @@
 
         function updateMeterLM(meter, value) {
             meterLM[meter] = parseFloat(value);
-            document.getElementById(meter + 'Value').textContent = (value * 100).toFixed(0) + '%';
+            const elem = document.getElementById(meter + 'Value');
+            if (elem) elem.textContent = (value * 100).toFixed(0) + '%';
             
             const slider = document.getElementById(meter + 'Slider');
-            if (value > 1.5) slider.style.background = '#ffcccc';
-            else if (value > 1.2) slider.style.background = '#ffe0cc';
-            else if (value < 0.8) slider.style.background = '#cce5ff';
-            else {
-                if (meter === 'meter1') slider.style.background = '#c9e0ff';
-                else if (meter === 'meter2') slider.style.background = '#ffe0c9';
-                else slider.style.background = '#d0f0d0';
+            if (slider) {
+                if (value > 1.5) slider.style.background = '#ffcccc';
+                else if (value > 1.2) slider.style.background = '#ffe0cc';
+                else if (value < 0.8) slider.style.background = '#cce5ff';
+                else {
+                    if (meter === 'meter1') slider.style.background = '#c9e0ff';
+                    else if (meter === 'meter2') slider.style.background = '#ffe0c9';
+                    else slider.style.background = '#d0f0d0';
+                }
             }
             
             updateAllDisplays();
@@ -1021,7 +1055,17 @@
         // NEW: Update THD
         function updateTHD(value) {
             thdPercent = parseFloat(value);
-            document.getElementById('thdValue').textContent = thdPercent.toFixed(1) + '%';
+            const elem = document.getElementById('thdValue');
+            if (elem) elem.textContent = thdPercent.toFixed(1) + '%';
+            updateAllDisplays();
+            drawCanvas();
+        }
+
+        // NEW: Update Impedance Multiplier
+        function updateZMultiplier(value) {
+            zMultiplier = parseFloat(value);
+            const elem = document.getElementById('zMultiplierValue');
+            if (elem) elem.textContent = zMultiplier.toFixed(1) + 'x';
             updateAllDisplays();
             drawCanvas();
         }
@@ -1124,7 +1168,7 @@
         let dragOffsetX, dragOffsetY;
 
         // ===========================================
-        // LOSS CALCULATION FUNCTIONS - NEW
+        // LOSS CALCULATION FUNCTIONS
         // ===========================================
         
         // Loss factors
@@ -1185,7 +1229,7 @@
             };
         }
 
-        // NEW: Update loss display
+        // Update loss display
         function updateLossDisplay() {
             const losses = calculateDetailedLosses();
             const totalLoad = loadFlowResults.totalP || 0;
@@ -1227,9 +1271,11 @@
                 ㅤ• Copper losses: I²R (depends on current)<br>
                 ㅤ• Core losses: Constant (0.5% of rating)<br>
                 ㅤ• Harmonic losses: ${(thdPercent * 0.2).toFixed(1)}% of load + ${(thdPercent/5).toFixed(1)}% of copper<br>
+                ㅤ• <strong>Impedance Multiplier: ${zMultiplier.toFixed(1)}x</strong> (scales all R and X)<br>
             `;
             
-            document.getElementById('lossDisplay').innerHTML = html;
+            const lossElem = document.getElementById('lossDisplay');
+            if (lossElem) lossElem.innerHTML = html;
         }
 
         // ===========================================
@@ -1258,12 +1304,15 @@
             }
             
             const jsonString = JSON.stringify(layoutData, null, 2);
-            document.getElementById('layoutConfigText').value = jsonString;
+            const elem = document.getElementById('layoutConfigText');
+            if (elem) elem.value = jsonString;
         }
 
         function importCoordinates() {
             try {
-                const jsonString = document.getElementById('layoutConfigText').value;
+                const elem = document.getElementById('layoutConfigText');
+                if (!elem) return;
+                const jsonString = elem.value;
                 const layoutData = JSON.parse(jsonString);
                 
                 if (layoutData.type === 'distributed' && systemType === 'distributed') {
@@ -1365,50 +1414,70 @@
 
         function copyToClipboard() {
             const textarea = document.getElementById('layoutConfigText');
-            textarea.select();
-            document.execCommand('copy');
-            alert('Layout copied to clipboard!');
+            if (textarea) {
+                textarea.select();
+                document.execCommand('copy');
+                alert('Layout copied to clipboard!');
+            }
         }
 
         // ===========================================
-        // NETWORK TOPOLOGY FUNCTIONS
+        // NETWORK TOPOLOGY FUNCTIONS - WITH IMPEDANCE MULTIPLIER
         // ===========================================
         function buildNetworkTopology() {
             const branches = [];
             const children = {};
             
             if (systemType === 'distributed') {
-                branches.push({ from: 0, to: 1, r: lineData.distributed.meter1.r, x: lineData.distributed.meter1.x, name: 'Src-M1' });
-                branches.push({ from: 0, to: 2, r: lineData.distributed.meter2.r, x: lineData.distributed.meter2.x, name: 'Src-M2' });
-                branches.push({ from: 0, to: 3, r: lineData.distributed.meter3.r, x: lineData.distributed.meter3.x, name: 'Src-M3' });
+                // Apply zMultiplier to ALL impedances
+                branches.push({ 
+                    from: 0, to: 1, 
+                    r: lineData.distributed.meter1.r * zMultiplier, 
+                    x: lineData.distributed.meter1.x * zMultiplier, 
+                    name: 'Src-M1' 
+                });
+                branches.push({ 
+                    from: 0, to: 2, 
+                    r: lineData.distributed.meter2.r * zMultiplier, 
+                    x: lineData.distributed.meter2.x * zMultiplier, 
+                    name: 'Src-M2' 
+                });
+                branches.push({ 
+                    from: 0, to: 3, 
+                    r: lineData.distributed.meter3.r * zMultiplier, 
+                    x: lineData.distributed.meter3.x * zMultiplier, 
+                    name: 'Src-M3' 
+                });
                 
-                // Meter 1 branches - impedance multipliers are FIXED (load multiplier affects POWER, not impedance)
+                // Meter 1 branches
                 for (let i = 0; i < 6; i++) {
                     const factor = 0.3 + (i * 0.15);
                     branches.push({ 
                         from: 1, to: 4 + i, 
-                        r: lineData.distributed.meter1.r * factor * 1.0, // Fixed impedance
-                        x: lineData.distributed.meter1.x * factor * 1.0,
+                        r: lineData.distributed.meter1.r * factor * zMultiplier,
+                        x: lineData.distributed.meter1.x * factor * zMultiplier,
                         name: `M1-A${i+1}` 
                     });
                 }
                 
+                // Meter 2 branches
                 for (let i = 0; i < 3; i++) {
                     const factor = 0.5 + (i * 0.25);
                     branches.push({ 
                         from: 2, to: 10 + i, 
-                        r: lineData.distributed.meter2.r * factor * 1.0, // Fixed impedance
-                        x: lineData.distributed.meter2.x * factor * 1.0,
+                        r: lineData.distributed.meter2.r * factor * zMultiplier,
+                        x: lineData.distributed.meter2.x * factor * zMultiplier,
                         name: `M2-B${i+1}` 
                     });
                 }
                 
+                // Meter 3 branches
                 for (let i = 0; i < 3; i++) {
                     const factor = 0.5 + (i * 0.25);
                     branches.push({ 
                         from: 3, to: 13 + i, 
-                        r: lineData.distributed.meter3.r * factor * 1.0, // Fixed impedance
-                        x: lineData.distributed.meter3.x * factor * 1.0,
+                        r: lineData.distributed.meter3.r * factor * zMultiplier,
+                        x: lineData.distributed.meter3.x * factor * zMultiplier,
                         name: `M3-C${i+1}` 
                     });
                 }
@@ -1419,12 +1488,13 @@
                 });
                 
             } else {
+                // Centralized - apply zMultiplier
                 for (let i = 0; i < 12; i++) {
                     const factor = 0.15 + (i * 0.08);
                     branches.push({ 
                         from: i, to: i + 1, 
-                        r: lineData.centralized.main.r * factor * 1.0, // Fixed impedance
-                        x: lineData.centralized.main.x * factor * 1.0,
+                        r: lineData.centralized.main.r * factor * zMultiplier,
+                        x: lineData.centralized.main.x * factor * zMultiplier,
                         name: `Bus${i}-Bus${i+1}` 
                     });
                 }
@@ -1490,7 +1560,7 @@
                     }
                     
                     if (isLoadBus && loadIndex !== -1 && loadIndex < Pbase.length) {
-                        // LOAD MULTIPLIER NOW CORRECTLY SCALES POWER, NOT IMPEDANCE
+                        // LOAD MULTIPLIER SCALES POWER, NOT IMPEDANCE
                         const P = Pbase[loadIndex] * loadMultiplier * meterFactor;
                         const Q = Qbase[loadIndex] * loadMultiplier * meterFactor * (powerFactor / 0.95);
                         
@@ -1584,8 +1654,10 @@
                 V_prev = [...V];
             }
             
-            document.getElementById('bfsInfo').innerHTML = `Iterations: ${iteration} | Tolerance: ${BFS_TOLERANCE}`;
-            document.getElementById('bfsStatus').innerHTML = `Status: Converged (Δ=${maxDeviation.toFixed(6)})`;
+            const bfsInfo = document.getElementById('bfsInfo');
+            const bfsStatus = document.getElementById('bfsStatus');
+            if (bfsInfo) bfsInfo.innerHTML = `Iterations: ${iteration} | Tolerance: ${BFS_TOLERANCE}`;
+            if (bfsStatus) bfsStatus.innerHTML = `Status: Converged (Δ=${maxDeviation.toFixed(6)})`;
             
             const results = {
                 voltages: [], angles: [], P: [], Q: [], branchP: [], branchQ: [],
@@ -1645,7 +1717,7 @@
             updateVoltageDisplay();
             updatePowerDisplay();
             updateAngleDisplay();
-            updateLossDisplay(); // NEW: Update loss display
+            updateLossDisplay();
             updateSummaryDisplay();
             updateLoadMetrics();
             updateComplianceDisplay();
@@ -1674,23 +1746,28 @@
             }
             
             html += '</table>';
-            document.getElementById('voltageDisplay').innerHTML = html;
+            const voltageElem = document.getElementById('voltageDisplay');
+            if (voltageElem) voltageElem.innerHTML = html;
         }
 
         function updatePowerDisplay() {
             const currentBusNames = systemType === 'distributed' ? distBusNames : centBusNames;
             let html = '<table class="load-flow-table">';
-            html += '<tr><th>Bus</th><th>P (kW)</th><th>Q (kVAR)</th><th>R (Ω)</th><th>X (Ω)</th></tr>';
+            html += '<tr><th>Bus</th><th>P (kW)</th><th>Q (kVAR)</th><th>R (Ω)</th><th>X (Ω)</th><th>|Z| (Ω)</th></tr>';
             
             for (let i = 0; i < loadFlowResults.P.length; i++) {
                 const P = loadFlowResults.P[i].toFixed(2);
                 const Q = loadFlowResults.Q[i].toFixed(2);
                 
                 // Show resistance for connected branches
-                let rText = '-', xText = '-';
+                let rText = '-', xText = '-', zText = '-';
                 if (i < networkBranches.length) {
-                    rText = networkBranches[i]?.r.toFixed(4) || '-';
-                    xText = networkBranches[i]?.x.toFixed(4) || '-';
+                    const r = networkBranches[i]?.r || 0;
+                    const x = networkBranches[i]?.x || 0;
+                    const z = Math.sqrt(r*r + x*x).toFixed(4);
+                    rText = r.toFixed(4);
+                    xText = x.toFixed(4);
+                    zText = z;
                 }
                 
                 html += `<tr>`;
@@ -1699,6 +1776,7 @@
                 html += `<td>${Q}</td>`;
                 html += `<td>${rText}</td>`;
                 html += `<td>${xText}</td>`;
+                html += `<td>${zText}</td>`;
                 html += `</tr>`;
             }
             
@@ -1707,20 +1785,26 @@
             // Show branch currents
             html += '<br><span style="color: #ffd700;">BRANCH CURRENTS:</span><br>';
             html += '<table class="load-flow-table">';
-            html += '<tr><th>Branch</th><th>Current (A)</th><th>R (Ω)</th></tr>';
+            html += '<tr><th>Branch</th><th>Current (A)</th><th>R (Ω)</th><th>X (Ω)</th></tr>';
             
             for (let j = 0; j < Math.min(6, loadFlowResults.branchCurrents.length); j++) {
                 if (loadFlowResults.branchCurrents[j] > 0.01) {
+                    const r = networkBranches[j]?.r || 0;
+                    const x = networkBranches[j]?.x || 0;
                     html += `<tr>`;
-                    html += `<td>Branch ${j+1}</td>`;
+                    html += `<td>${networkBranches[j]?.name || `Branch ${j+1}`}</td>`;
                     html += `<td>${(loadFlowResults.branchCurrents[j] * 100).toFixed(2)} A</td>`;
-                    html += `<td>${networkBranches[j]?.r.toFixed(4) || 0}</td>`;
+                    html += `<td>${r.toFixed(4)} Ω</td>`;
+                    html += `<td>${x.toFixed(4)} Ω</td>`;
                     html += `</tr>`;
                 }
             }
             
             html += '</table>';
-            document.getElementById('powerDisplay').innerHTML = html;
+            html += `<br><span style="color: #ffd700;">⚡ Impedance Multiplier: ${zMultiplier.toFixed(1)}x</span>`;
+            
+            const powerElem = document.getElementById('powerDisplay');
+            if (powerElem) powerElem.innerHTML = html;
         }
 
         function updateAngleDisplay() {
@@ -1734,7 +1818,8 @@
             }
             
             html += '</table>';
-            document.getElementById('angleDisplay').innerHTML = html;
+            const angleElem = document.getElementById('angleDisplay');
+            if (angleElem) angleElem.innerHTML = html;
         }
 
         function updateSummaryDisplay() {
@@ -1764,7 +1849,8 @@
                 <span style="color: #3498db;">TOTAL LOAD:</span><br>
                 • P: ${totalP} kW | Q: ${totalQ} kVAR | S: ${totalS} kVA<br>
                 • Power Factor: ${avgPF}<br>
-                • THD: ${thdPercent}%<br><br>
+                • THD: ${thdPercent}%<br>
+                • Impedance Multiplier: ${zMultiplier.toFixed(1)}x<br><br>
                 
                 <span style="color: #3498db;">VOLTAGE PROFILE (13.7 kV base):</span><br>
                 • Min: ${minV.toFixed(4)} pu (${(minV*basekV).toFixed(2)} kV)<br>
@@ -1779,7 +1865,8 @@
                 • Loss %: ${((losses.total / loadFlowResults.totalP) * 100).toFixed(2)}%<br>
             `;
             
-            document.getElementById('summaryDisplay').innerHTML = html;
+            const summaryElem = document.getElementById('summaryDisplay');
+            if (summaryElem) summaryElem.innerHTML = html;
         }
 
         function updateLoadMetrics() {
@@ -1791,10 +1878,11 @@
                 <div class="metric-card"><div class="label">Total Load</div><div class="value">${totalP.toFixed(1)}<span class="unit">kW</span></div></div>
                 <div class="metric-card"><div class="label">Peak Demand</div><div class="value">${(totalP * 1.2).toFixed(1)}<span class="unit">kW</span></div></div>
                 <div class="metric-card"><div class="label">Total Loss</div><div class="value">${totalLossPercent}<span class="unit">%</span></div></div>
-                <div class="metric-card"><div class="label">THD</div><div class="value">${thdPercent}<span class="unit">%</span></div></div>
+                <div class="metric-card"><div class="label">Z Multiplier</div><div class="value">${zMultiplier.toFixed(1)}<span class="unit">x</span></div></div>
             `;
             
-            document.getElementById('loadMetrics').innerHTML = metricsHtml;
+            const metricsElem = document.getElementById('loadMetrics');
+            if (metricsElem) metricsElem.innerHTML = metricsHtml;
         }
 
         function updateComplianceDisplay() {
@@ -1819,7 +1907,8 @@
                 Voltage: ${worstV.toFixed(4)} pu (${(worstV*basekV).toFixed(2)} kV)<br>
             `;
             
-            document.getElementById('complianceDisplay').innerHTML = html;
+            const complianceElem = document.getElementById('complianceDisplay');
+            if (complianceElem) complianceElem.innerHTML = html;
         }
 
         // Tab switching
@@ -1828,7 +1917,8 @@
             event.target.classList.add('active');
             
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(tabName + '-tab').classList.add('active');
+            const tabElem = document.getElementById(tabName + '-tab');
+            if (tabElem) tabElem.classList.add('active');
         }
 
         // Canvas drawing functions
@@ -1920,6 +2010,7 @@
 
         function drawCanvas() {
             const canvas = document.getElementById('powerCanvas');
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
             
             ctx.save();
@@ -2165,21 +2256,24 @@
 
         function updateLoad(value) {
             loadMultiplier = parseFloat(value);
-            document.getElementById('loadValue').textContent = (loadMultiplier * 100).toFixed(0) + '%';
+            const elem = document.getElementById('loadValue');
+            if (elem) elem.textContent = (loadMultiplier * 100).toFixed(0) + '%';
             updateAllDisplays();
             drawCanvas();
         }
 
         function updatePF(value) {
             powerFactor = parseFloat(value);
-            document.getElementById('pfValue').textContent = powerFactor.toFixed(2);
+            const elem = document.getElementById('pfValue');
+            if (elem) elem.textContent = powerFactor.toFixed(2);
             updateAllDisplays();
             drawCanvas();
         }
 
         function updateSpeed(value) {
             animationSpeed = parseFloat(value);
-            document.getElementById('speedValue').textContent = animationSpeed.toFixed(1) + 'x';
+            const elem = document.getElementById('speedValue');
+            if (elem) elem.textContent = animationSpeed.toFixed(1) + 'x';
         }
 
         function startAnimation() {
@@ -2198,36 +2292,57 @@
             loadMultiplier = 1.0;
             powerFactor = 0.95;
             thdPercent = 3.0;
+            zMultiplier = 1.0;
             animationSpeed = 1.0;
             systemType = 'distributed';
             
             meterLM = { meter1: 1.0, meter2: 1.0, meter3: 1.0 };
             
-            document.getElementById('meter1Slider').value = 1.0;
-            document.getElementById('meter2Slider').value = 1.0;
-            document.getElementById('meter3Slider').value = 1.0;
-            document.getElementById('meter1Value').textContent = '100%';
-            document.getElementById('meter2Value').textContent = '100%';
-            document.getElementById('meter3Value').textContent = '100%';
+            // Safely set values with null checks
+            const m1Slider = document.getElementById('meter1Slider');
+            const m2Slider = document.getElementById('meter2Slider');
+            const m3Slider = document.getElementById('meter3Slider');
+            const thdSlider = document.getElementById('thdSlider');
+            const zSlider = document.getElementById('zMultiplierSlider');
+            const loadSlider = document.getElementById('loadSlider');
+            const pfSlider = document.getElementById('pfSlider');
+            const speedSlider = document.getElementById('speedSlider');
             
-            document.getElementById('thdSlider').value = 3.0;
-            document.getElementById('thdValue').textContent = '3.0%';
+            if (m1Slider) m1Slider.value = 1.0;
+            if (m2Slider) m2Slider.value = 1.0;
+            if (m3Slider) m3Slider.value = 1.0;
+            if (thdSlider) thdSlider.value = 3.0;
+            if (zSlider) zSlider.value = 1.0;
+            if (loadSlider) loadSlider.value = 1.0;
+            if (pfSlider) pfSlider.value = 0.95;
+            if (speedSlider) speedSlider.value = 1.0;
             
-            document.getElementById('meter1Slider').style.background = '#c9e0ff';
-            document.getElementById('meter2Slider').style.background = '#ffe0c9';
-            document.getElementById('meter3Slider').style.background = '#d0f0d0';
+            const m1Val = document.getElementById('meter1Value');
+            const m2Val = document.getElementById('meter2Value');
+            const m3Val = document.getElementById('meter3Value');
+            const thdVal = document.getElementById('thdValue');
+            const zVal = document.getElementById('zMultiplierValue');
+            const loadVal = document.getElementById('loadValue');
+            const pfVal = document.getElementById('pfValue');
+            const speedVal = document.getElementById('speedValue');
+            
+            if (m1Val) m1Val.textContent = '100%';
+            if (m2Val) m2Val.textContent = '100%';
+            if (m3Val) m3Val.textContent = '100%';
+            if (thdVal) thdVal.textContent = '3.0%';
+            if (zVal) zVal.textContent = '1.0x';
+            if (loadVal) loadVal.textContent = '100%';
+            if (pfVal) pfVal.textContent = '0.95';
+            if (speedVal) speedVal.textContent = '1.0x';
+            
+            if (m1Slider) m1Slider.style.background = '#c9e0ff';
+            if (m2Slider) m2Slider.style.background = '#ffe0c9';
+            if (m3Slider) m3Slider.style.background = '#d0f0d0';
+            
+            const distRadio = document.querySelector('input[value="distributed"]');
+            if (distRadio) distRadio.checked = true;
             
             changeSystem('distributed');
-            
-            document.getElementById('loadSlider').value = 1.0;
-            document.getElementById('pfSlider').value = 0.95;
-            document.getElementById('speedSlider').value = 1.0;
-            document.getElementById('loadValue').textContent = '100%';
-            document.getElementById('pfValue').textContent = '0.95';
-            document.getElementById('speedValue').textContent = '1.0x';
-            
-            document.querySelector('input[value="distributed"]').checked = true;
-            
             resetView();
             updateAllDisplays();
             drawCanvas();
@@ -2236,19 +2351,23 @@
         // Canvas interaction functions
         function setMode(newMode) {
             mode = newMode;
-            document.getElementById('modeSelect').classList.toggle('active', mode === 'select');
-            document.getElementById('modePan').classList.toggle('active', mode === 'pan');
+            const modeSelect = document.getElementById('modeSelect');
+            const modePan = document.getElementById('modePan');
+            if (modeSelect) modeSelect.classList.toggle('active', mode === 'select');
+            if (modePan) modePan.classList.toggle('active', mode === 'pan');
         }
 
         function zoomIn() {
             scale = Math.min(3.0, scale + 0.2);
-            document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+            const zoomElem = document.getElementById('zoomLevel');
+            if (zoomElem) zoomElem.textContent = Math.round(scale * 100) + '%';
             drawCanvas();
         }
 
         function zoomOut() {
             scale = Math.max(0.3, scale - 0.2);
-            document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+            const zoomElem = document.getElementById('zoomLevel');
+            if (zoomElem) zoomElem.textContent = Math.round(scale * 100) + '%';
             drawCanvas();
         }
 
@@ -2256,7 +2375,8 @@
             scale = 1.0;
             offsetX = 0;
             offsetY = 0;
-            document.getElementById('zoomLevel').textContent = '100%';
+            const zoomElem = document.getElementById('zoomLevel');
+            if (zoomElem) zoomElem.textContent = '100%';
             drawCanvas();
         }
 
@@ -2285,6 +2405,8 @@
             maxY += 100;
             
             const container = document.getElementById('canvasContainer');
+            if (!container) return;
+            
             const containerWidth = container.clientWidth - 40;
             const containerHeight = container.clientHeight - 40;
             
@@ -2298,7 +2420,8 @@
             offsetX = (containerWidth/2 - (minX + maxX)/2 * scale);
             offsetY = (containerHeight/2 - (minY + maxY)/2 * scale);
             
-            document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+            const zoomElem = document.getElementById('zoomLevel');
+            if (zoomElem) zoomElem.textContent = Math.round(scale * 100) + '%';
             drawCanvas();
         }
 
@@ -2330,6 +2453,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('canvasContainer');
             const canvas = document.getElementById('powerCanvas');
+            
+            if (!container || !canvas) return;
             
             loadDefaultLayout();
             
@@ -2425,7 +2550,8 @@
                     offsetX = mouseX - worldX * scale;
                     offsetY = mouseY - worldY * scale;
                     
-                    document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+                    const zoomElem = document.getElementById('zoomLevel');
+                    if (zoomElem) zoomElem.textContent = Math.round(scale * 100) + '%';
                     drawCanvas();
                 } else {
                     offsetX -= e.deltaX;
@@ -2444,6 +2570,7 @@
         window.updateLoad = updateLoad;
         window.updatePF = updatePF;
         window.updateTHD = updateTHD;
+        window.updateZMultiplier = updateZMultiplier;
         window.updateSpeed = updateSpeed;
         window.updateMeterLM = updateMeterLM;
         window.startAnimation = startAnimation;

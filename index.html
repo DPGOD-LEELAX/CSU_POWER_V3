@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSU-Carig Power Flow - LAST NA TO</title>
+    <title>CSU-Carig Power Flow - WITH LOSS ANALYSIS</title>
     <style>
         * {
             margin: 0;
@@ -40,6 +40,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            flex-wrap: wrap;
         }
 
         .header h1 i {
@@ -317,7 +318,7 @@
 
         .config-export textarea {
             width: 100%;
-            height: 200px;
+            height: 150px;
             background: #1a2f4a;
             color: #ffd700;
             border: 1px solid #ffd700;
@@ -502,7 +503,7 @@
             padding: 20px;
             position: relative;
             overflow: auto;
-            height: 700px;
+            height: 600px;
             width: 100%;
             border: 3px solid #e0e7ff;
             box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
@@ -517,9 +518,33 @@
             display: block;
             background: #f0f4f8;
             width: 3000px;
-            height: 2200px;
+            height: 1800px;
             max-width: none;
             transform-origin: 0 0;
+        }
+
+        /* NEW: Image panel below canvas */
+        .image-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8faff;
+            border-radius: 15px;
+            border: 2px solid #e0e7ff;
+            text-align: center;
+        }
+
+        .image-panel img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 10px;
+            border: 3px solid #ffd700;
+        }
+
+        .image-caption {
+            margin-top: 10px;
+            color: #1e3c72;
+            font-weight: 600;
+            font-size: 0.9em;
         }
 
         .legend {
@@ -551,13 +576,16 @@
         .color-box.green { background: #00ff00; }
         .color-box.yellow { background: #ffff00; }
         .color-box.red { background: #ff0000; }
+        .color-box.orange { background: #ff8000; }
         .color-box.gray { background: #cccccc; }
+        .color-box.purple { background: #9b59b6; }
 
         .tab-container {
             display: flex;
             gap: 5px;
             margin-bottom: 15px;
             border-bottom: 2px solid #ffd700;
+            flex-wrap: wrap;
         }
 
         .tab {
@@ -569,6 +597,12 @@
             cursor: pointer;
             font-weight: 600;
             opacity: 0.7;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            opacity: 1;
+            background: #2a3f5a;
         }
 
         .tab.active {
@@ -594,6 +628,10 @@
             font-weight: bold;
             margin-left: 10px;
         }
+
+        .loss-high { color: #ff0000; font-weight: bold; }
+        .loss-medium { color: #ff8000; font-weight: bold; }
+        .loss-low { color: #ffff00; font-weight: bold; }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -602,13 +640,13 @@
         <div class="header">
             <h1>
                 <i class="fas fa-bolt"></i>
-                CSU-Carig Power Flow - LAST NA TO
+                CSU-Carig Power Flow - WITH LOSS ANALYSIS
                 <span class="badge">GROUP 7</span>
                 <span class="base-kv-badge">13.7 kV Base</span>
             </h1>
             <div class="subtitle">
                 <span><i class="fas fa-university"></i> Cagayan State University - Carig Campus</span>
-                <span><i class="fas fa-arrows-alt"></i> Positions</span>
+                <span><i class="fas fa-chart-line"></i> Complete Loss Analysis</span>
                 <span><i class="fas fa-calendar"></i> AY 2025-2026</span>
             </div>
         </div>
@@ -639,14 +677,15 @@
                 </div>
 
                 <div class="control-section">
-                    <h3><i class="fas fa-sliders-h"></i> Global Load Parameters</h3>
+                    <h3><i class="fas fa-sliders-h"></i> Load Parameters</h3>
                     
                     <div class="slider-group">
                         <div class="slider-label">
                             <span><i class="fas fa-globe"></i> Global Load Multiplier</span>
                             <span class="value-badge" id="loadValue">100%</span>
                         </div>
-                        <input type="range" class="slider" id="loadSlider" min="0.5" max="5.0" step="0.1" value="1.0" oninput="updateLoad(this.value)">
+                        <input type="range" class="slider" id="loadSlider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateLoad(this.value)">
+                        <small style="color: #666;">Scales the POWER (kW) demand, NOT impedance</small>
                     </div>
 
                     <!-- PER-METER LOAD MULTIPLIERS -->
@@ -686,15 +725,17 @@
                             <span><i class="fas fa-wave-square"></i> Power Factor</span>
                             <span class="value-badge" id="pfValue">0.95</span>
                         </div>
-                        <input type="range" class="slider" id="pfSlider" min="0.3" max="1.0" step="0.01" value="0.95" oninput="updatePF(this.value)">
+                        <input type="range" class="slider" id="pfSlider" min="0.5" max="1.0" step="0.01" value="0.95" oninput="updatePF(this.value)">
                     </div>
 
+                    <!-- NEW: Harmonic Distortion Slider -->
                     <div class="slider-group">
                         <div class="slider-label">
-                            <span><i class="fas fa-tachometer-alt"></i> Animation Speed</span>
-                            <span class="value-badge" id="speedValue">1.0x</span>
+                            <span><i class="fas fa-chart-line"></i> THD % (Harmonics)</span>
+                            <span class="value-badge" id="thdValue">3.0%</span>
                         </div>
-                        <input type="range" class="slider" id="speedSlider" min="0.1" max="3.0" step="0.1" value="1.0" oninput="updateSpeed(this.value)">
+                        <input type="range" class="slider" id="thdSlider" min="0" max="15" step="0.5" value="3.0" oninput="updateTHD(this.value)" style="background: #f0d0ff;">
+                        <small style="color: #666;">Total Harmonic Distortion - increases losses</small>
                     </div>
 
                     <div class="button-grid">
@@ -767,7 +808,7 @@
                     </div>
                 </div>
 
-                <!-- Load Flow Results Tabs -->
+                <!-- Load Flow Results Tabs - ADDED LOSSES TAB -->
                 <div class="data-panel">
                     <h4><i class="fas fa-chart-bar"></i> BFS LOAD FLOW RESULTS</h4>
                     
@@ -775,6 +816,7 @@
                         <button class="tab active" onclick="switchTab('voltages')">VOLTAGES</button>
                         <button class="tab" onclick="switchTab('power')">P & Q</button>
                         <button class="tab" onclick="switchTab('angles')">ANGLES</button>
+                        <button class="tab" onclick="switchTab('losses')">LOSSES</button>
                         <button class="tab" onclick="switchTab('summary')">SUMMARY</button>
                     </div>
                     
@@ -793,6 +835,13 @@
                     <div id="angles-tab" class="tab-content">
                         <div class="data-content" id="angleDisplay">
                             Computing voltage angles...
+                        </div>
+                    </div>
+                    
+                    <!-- NEW: Losses Tab -->
+                    <div id="losses-tab" class="tab-content">
+                        <div class="data-content" id="lossDisplay">
+                            Computing losses...
                         </div>
                     </div>
                     
@@ -844,7 +893,15 @@
                     <span class="zoom-level" id="zoomLevel">100%</span>
                 </div>
                 <div class="canvas-container" id="canvasContainer">
-                    <canvas id="powerCanvas" width="3000" height="2200"></canvas>
+                    <canvas id="powerCanvas" width="3000" height="1800"></canvas>
+                </div>
+
+                <!-- NEW: Image Panel below canvas for 1.jpg -->
+                <div class="image-panel">
+                    <img src="images/1.jpg" alt="Loss Analysis Diagram" id="lossImage">
+                    <div class="image-caption">
+                        <i class="fas fa-image"></i> Loss Analysis - Copper, Core, and Harmonic Losses
+                    </div>
                 </div>
 
                 <!-- Legend -->
@@ -852,7 +909,8 @@
                     <div class="legend-item"><div class="color-box green"></div><span>Good (≥0.97 pu)</span></div>
                     <div class="legend-item"><div class="color-box yellow"></div><span>Warning (0.95-0.97 pu)</span></div>
                     <div class="legend-item"><div class="color-box red"></div><span>Violation (<0.95 pu)</span></div>
-                    <div class="legend-item"><div class="color-box gray"></div><span>Idle Component (Dist Mode)</span></div>
+                    <div class="legend-item"><div class="color-box orange"></div><span>High Loss Area</span></div>
+                    <div class="legend-item"><div class="color-box purple"></div><span>Harmonic Losses</span></div>
                 </div>
             </div>
         </div>
@@ -922,6 +980,7 @@
         let animationRunning = true;
         let loadMultiplier = 1.0;
         let powerFactor = 0.95;
+        let thdPercent = 3.0; // NEW: Total Harmonic Distortion %
         let animationSpeed = 1.0;
         let animationFrame;
         
@@ -955,6 +1014,14 @@
                 else slider.style.background = '#d0f0d0';
             }
             
+            updateAllDisplays();
+            drawCanvas();
+        }
+
+        // NEW: Update THD
+        function updateTHD(value) {
+            thdPercent = parseFloat(value);
+            document.getElementById('thdValue').textContent = thdPercent.toFixed(1) + '%';
             updateAllDisplays();
             drawCanvas();
         }
@@ -1055,6 +1122,115 @@
         let selectedIndex = null;
         let selectedName = null;
         let dragOffsetX, dragOffsetY;
+
+        // ===========================================
+        // LOSS CALCULATION FUNCTIONS - NEW
+        // ===========================================
+        
+        // Loss factors
+        const lossFactors = {
+            coreLossPercent: 0.005, // 0.5% of rated capacity - constant core losses
+            harmonicFactor: 0.01,    // Base harmonic loss factor (per % THD)
+            temperatureFactor: 1.0    // Can be adjusted for temperature
+        };
+
+        // Calculate all losses with sources
+        function calculateDetailedLosses() {
+            const totalCapacity = systemType === 'distributed' ? 750 : 1500; // kVA
+            const totalLoadKW = loadFlowResults.totalP || 0;
+            
+            // 1. Copper losses (I²R) - from BFS results
+            const copperLosses = loadFlowResults.branchLossesP || [];
+            const totalCopperLoss = loadFlowResults.totalPLoss || 0;
+            
+            // 2. Core losses (constant, independent of load)
+            const coreLoss = totalCapacity * lossFactors.coreLossPercent; // in kW
+            
+            // 3. Harmonic losses (additional from non-linear loads)
+            // THD causes additional heating - approximate as % of copper losses
+            const harmonicMultiplier = 1 + (thdPercent / 100) * 2; // THD effect
+            const harmonicLoss = totalCopperLoss * (harmonicMultiplier - 1) + (totalLoadKW * 0.005 * (thdPercent / 5));
+            
+            // 4. Identify where losses occur (by branch)
+            const branchLocations = [];
+            copperLosses.forEach((loss, idx) => {
+                if (loss > 0.1) { // Only show significant losses
+                    let location = '';
+                    if (idx < 3) location = 'Source to Meters';
+                    else if (idx < 9) location = 'Meter 1 branches';
+                    else if (idx < 12) location = 'Meter 2 branches';
+                    else location = 'Meter 3 branches';
+                    
+                    branchLocations.push({
+                        branch: idx + 1,
+                        loss: loss,
+                        location: location,
+                        r: networkBranches[idx]?.r || 0,
+                        i: loadFlowResults.branchCurrents?.[idx] || 0
+                    });
+                }
+            });
+            
+            // Sort by loss magnitude
+            branchLocations.sort((a, b) => b.loss - a.loss);
+            
+            return {
+                copper: copperLosses,
+                totalCopper: totalCopperLoss,
+                core: coreLoss,
+                harmonic: harmonicLoss,
+                total: totalCopperLoss + coreLoss + harmonicLoss,
+                branches: branchLocations.slice(0, 8), // Top 8 lossy branches
+                thdEffect: harmonicMultiplier
+            };
+        }
+
+        // NEW: Update loss display
+        function updateLossDisplay() {
+            const losses = calculateDetailedLosses();
+            const totalLoad = loadFlowResults.totalP || 0;
+            
+            let html = `
+                <span style="color: #ffd700;">📊 LOSS BREAKDOWN - WHERE LOSSES COME FROM</span><br>
+                <span style="color: #ffd700;">────────────────────────────────</span><br><br>
+                
+                <span style="color: #ff0000;">🔴 COPPER LOSSES (I²R):</span><br>
+                <span style="font-size: 0.85em; color: #aaa;"> from current flowing through resistance</span><br>
+                ㅤTotal: ${losses.totalCopper.toFixed(2)} kW<br>
+            `;
+            
+            // Show top loss locations
+            if (losses.branches.length > 0) {
+                html += `<br><span style="color: #ff8000;">📍 WHERE LOSSES OCCUR:</span><br>`;
+                losses.branches.forEach((b, i) => {
+                    const lossClass = b.loss > 5 ? 'loss-high' : (b.loss > 2 ? 'loss-medium' : 'loss-low');
+                    html += `ㅤ${i+1}. ${b.location} - Branch ${b.branch}: <span class="${lossClass}">${b.loss.toFixed(2)} kW</span> (R=${b.r.toFixed(4)}Ω, I=${b.i.toFixed(2)}A)<br>`;
+                });
+            }
+            
+            html += `
+                <br><span style="color: #e67e22;">🟠 CORE (IRON) LOSSES:</span><br>
+                <span style="font-size: 0.85em; color: #aaa;"> constant, from transformer magnetization</span><br>
+                ㅤTransformer core: ${losses.core.toFixed(2)} kW<br>
+                
+                <br><span style="color: #9b59b6;">🟣 HARMONIC LOSSES (THD = ${thdPercent}%):</span><br>
+                <span style="font-size: 0.85em; color: #aaa;"> from non-linear loads (computers, LEDs, VFDs)</span><br>
+                ㅤAdditional losses: ${losses.harmonic.toFixed(2)} kW<br>
+                ㅤTHD multiplier: ${losses.thdEffect.toFixed(2)}x<br>
+                
+                <br><span style="color: #ffd700;">══════════════════════════════</span><br>
+                <span style="color: #ff0000; font-size: 1.1em;">💰 TOTAL LOSSES: ${losses.total.toFixed(2)} kW</span><br>
+                <span style="color: #aaa;"> (${((losses.total / totalLoad) * 100).toFixed(2)}% of total load)</span><br>
+                <span style="color: #ffd700;">══════════════════════════════</span><br>
+                
+                <br><span style="color: #3498db;">📋 LOSS FACTORS:</span><br>
+                ㅤ• Copper losses: I²R (depends on current)<br>
+                ㅤ• Core losses: Constant (0.5% of rating)<br>
+                ㅤ• Harmonic losses: ${(thdPercent * 0.2).toFixed(1)}% of load + ${(thdPercent/5).toFixed(1)}% of copper<br>
+            `;
+            
+            document.getElementById('lossDisplay').innerHTML = html;
+        }
 
         // ===========================================
         // LAYOUT CONFIGURATION FUNCTIONS
@@ -1206,24 +1382,23 @@
                 branches.push({ from: 0, to: 2, r: lineData.distributed.meter2.r, x: lineData.distributed.meter2.x, name: 'Src-M2' });
                 branches.push({ from: 0, to: 3, r: lineData.distributed.meter3.r, x: lineData.distributed.meter3.x, name: 'Src-M3' });
                 
-                // Meter 1 branches
-                // Meter 1 branches
-for (let i = 0; i < 6; i++) {
-    const factor = 0.3 + (i * 0.15);
-    branches.push({ 
-        from: 1, to: 4 + i, 
-        r: lineData.distributed.meter1.r * factor * 1.0, // CHANGED to 1.0
-        x: lineData.distributed.meter1.x * factor * 1.0, // CHANGED to 1.0
-        name: `M1-A${i+1}` 
-    });
-}
+                // Meter 1 branches - impedance multipliers are FIXED (load multiplier affects POWER, not impedance)
+                for (let i = 0; i < 6; i++) {
+                    const factor = 0.3 + (i * 0.15);
+                    branches.push({ 
+                        from: 1, to: 4 + i, 
+                        r: lineData.distributed.meter1.r * factor * 1.0, // Fixed impedance
+                        x: lineData.distributed.meter1.x * factor * 1.0,
+                        name: `M1-A${i+1}` 
+                    });
+                }
                 
                 for (let i = 0; i < 3; i++) {
                     const factor = 0.5 + (i * 0.25);
                     branches.push({ 
                         from: 2, to: 10 + i, 
-                        r: lineData.distributed.meter2.r * factor * 2.0,
-                        x: lineData.distributed.meter2.x * factor * 2.0, 
+                        r: lineData.distributed.meter2.r * factor * 1.0, // Fixed impedance
+                        x: lineData.distributed.meter2.x * factor * 1.0,
                         name: `M2-B${i+1}` 
                     });
                 }
@@ -1232,8 +1407,8 @@ for (let i = 0; i < 6; i++) {
                     const factor = 0.5 + (i * 0.25);
                     branches.push({ 
                         from: 3, to: 13 + i, 
-                        r: lineData.distributed.meter3.r * factor * 1.5,
-                        x: lineData.distributed.meter3.x * factor * 1.5, 
+                        r: lineData.distributed.meter3.r * factor * 1.0, // Fixed impedance
+                        x: lineData.distributed.meter3.x * factor * 1.0,
                         name: `M3-C${i+1}` 
                     });
                 }
@@ -1248,8 +1423,8 @@ for (let i = 0; i < 6; i++) {
                     const factor = 0.15 + (i * 0.08);
                     branches.push({ 
                         from: i, to: i + 1, 
-                        r: lineData.centralized.main.r * factor * 3.0,
-                        x: lineData.centralized.main.x * factor * 3.0, 
+                        r: lineData.centralized.main.r * factor * 1.0, // Fixed impedance
+                        x: lineData.centralized.main.x * factor * 1.0,
                         name: `Bus${i}-Bus${i+1}` 
                     });
                 }
@@ -1315,6 +1490,7 @@ for (let i = 0; i < 6; i++) {
                     }
                     
                     if (isLoadBus && loadIndex !== -1 && loadIndex < Pbase.length) {
+                        // LOAD MULTIPLIER NOW CORRECTLY SCALES POWER, NOT IMPEDANCE
                         const P = Pbase[loadIndex] * loadMultiplier * meterFactor;
                         const Q = Qbase[loadIndex] * loadMultiplier * meterFactor * (powerFactor / 0.95);
                         
@@ -1376,24 +1552,18 @@ for (let i = 0; i < 6; i++) {
                                 const branchIndex = networkBranches.indexOf(childBranch);
                                 if (branchIndex !== -1) {
                                     const Z_mag = Math.sqrt(childBranch.r*childBranch.r + childBranch.x*childBranch.x);
-                                    // FORWARD SWEEP - REDUCED DROP FOR CENTRALIZED
-// FORWARD SWEEP - REDUCED DROP FOR CENTRALIZED
-// FORWARD SWEEP - REDUCED DROP FOR CENTRALIZED
-let dropScale;
-if (systemType === 'centralized') {
-    // Much smaller drop scale for centralized
-    dropScale = 0.35; // REDUCED FROM 0.8 to 0.35
-    
-    // Calculate voltage drop WITHOUT hard bound during calculation
-    const rawVoltage = V[currentNode] - (I[branchIndex] * Z_mag * dropScale);
-    
-    // Don't apply Math.max here - let it go naturally
-    V[childNode] = rawVoltage;
-} else {
-    dropScale = 3.5; // Keep high for distributed
-    V[childNode] = Math.max(0.70, V[currentNode] - (I[branchIndex] * Z_mag * dropScale));
-}
                                     
+                                    let dropScale;
+                                    if (systemType === 'centralized') {
+                                        dropScale = 0.35;
+                                        const rawVoltage = V[currentNode] - (I[branchIndex] * Z_mag * dropScale);
+                                        V[childNode] = rawVoltage;
+                                    } else {
+                                        dropScale = 3.5;
+                                        V[childNode] = Math.max(0.70, V[currentNode] - (I[branchIndex] * Z_mag * dropScale));
+                                    }
+                                    
+                                    // Loss calculation (copper losses)
                                     P_loss[branchIndex] = I[branchIndex] * I[branchIndex] * childBranch.r * 1000;
                                     Q_loss[branchIndex] = I[branchIndex] * I[branchIndex] * childBranch.x * 1000;
                                 }
@@ -1475,6 +1645,7 @@ if (systemType === 'centralized') {
             updateVoltageDisplay();
             updatePowerDisplay();
             updateAngleDisplay();
+            updateLossDisplay(); // NEW: Update loss display
             updateSummaryDisplay();
             updateLoadMetrics();
             updateComplianceDisplay();
@@ -1509,29 +1680,42 @@ if (systemType === 'centralized') {
         function updatePowerDisplay() {
             const currentBusNames = systemType === 'distributed' ? distBusNames : centBusNames;
             let html = '<table class="load-flow-table">';
-            html += '<tr><th>Bus</th><th>P (kW)</th><th>Q (kVAR)</th></tr>';
+            html += '<tr><th>Bus</th><th>P (kW)</th><th>Q (kVAR)</th><th>R (Ω)</th><th>X (Ω)</th></tr>';
             
             for (let i = 0; i < loadFlowResults.P.length; i++) {
                 const P = loadFlowResults.P[i].toFixed(2);
                 const Q = loadFlowResults.Q[i].toFixed(2);
                 
+                // Show resistance for connected branches
+                let rText = '-', xText = '-';
+                if (i < networkBranches.length) {
+                    rText = networkBranches[i]?.r.toFixed(4) || '-';
+                    xText = networkBranches[i]?.x.toFixed(4) || '-';
+                }
+                
                 html += `<tr>`;
                 html += `<td>${currentBusNames[i]}</td>`;
                 html += `<td>${P}</td>`;
                 html += `<td>${Q}</td>`;
+                html += `<td>${rText}</td>`;
+                html += `<td>${xText}</td>`;
                 html += `</tr>`;
             }
             
             html += '</table>';
             
-            html += '<br><span style="color: #ffd700;">BRANCH LOSSES:</span><br>';
+            // Show branch currents
+            html += '<br><span style="color: #ffd700;">BRANCH CURRENTS:</span><br>';
             html += '<table class="load-flow-table">';
-            html += '<tr><th>Branch</th><th>P Loss (W)</th></tr>';
+            html += '<tr><th>Branch</th><th>Current (A)</th><th>R (Ω)</th></tr>';
             
-            const maxBranches = Math.min(6, loadFlowResults.branchLossesP.length);
-            for (let j = 0; j < maxBranches; j++) {
-                if (loadFlowResults.branchLossesP[j] > 0.01) {
-                    html += `<tr><td>Branch ${j+1}</td><td>${loadFlowResults.branchLossesP[j].toFixed(2)}</td></tr>`;
+            for (let j = 0; j < Math.min(6, loadFlowResults.branchCurrents.length); j++) {
+                if (loadFlowResults.branchCurrents[j] > 0.01) {
+                    html += `<tr>`;
+                    html += `<td>Branch ${j+1}</td>`;
+                    html += `<td>${(loadFlowResults.branchCurrents[j] * 100).toFixed(2)} A</td>`;
+                    html += `<td>${networkBranches[j]?.r.toFixed(4) || 0}</td>`;
+                    html += `</tr>`;
                 }
             }
             
@@ -1565,22 +1749,34 @@ if (systemType === 'centralized') {
             const maxV = Math.max(...voltages);
             const avgV = (voltages.reduce((a, b) => a + b, 0) / voltages.length).toFixed(4);
             
+            // Get loss breakdown
+            const losses = calculateDetailedLosses();
+            
             let html = `
                 <span style="color: #ffd700;">📊 BFS LOAD FLOW SUMMARY</span><br>
                 <span style="color: #ffd700;">────────────────</span><br><br>
+                
                 <span style="color: #3498db;">ITERATION INFO:</span><br>
                 • Iterations: ${loadFlowResults.iterations}<br>
-                • Max Deviation: ${loadFlowResults.maxDeviation.toFixed(6)}<br><br>
+                • Max Deviation: ${loadFlowResults.maxDeviation.toFixed(6)}<br>
+                • Tolerance: ${BFS_TOLERANCE}<br><br>
+                
                 <span style="color: #3498db;">TOTAL LOAD:</span><br>
                 • P: ${totalP} kW | Q: ${totalQ} kVAR | S: ${totalS} kVA<br>
-                • Power Factor: ${avgPF}<br><br>
+                • Power Factor: ${avgPF}<br>
+                • THD: ${thdPercent}%<br><br>
+                
                 <span style="color: #3498db;">VOLTAGE PROFILE (13.7 kV base):</span><br>
                 • Min: ${minV.toFixed(4)} pu (${(minV*basekV).toFixed(2)} kV)<br>
                 • Max: ${maxV.toFixed(4)} pu (${(maxV*basekV).toFixed(2)} kV)<br>
                 • Avg: ${avgV} pu<br><br>
-                <span style="color: #3498db;">SYSTEM LOSSES:</span><br>
-                • Total P Loss: ${totalLossP} W<br>
-                • Loss %: ${((loadFlowResults.totalPLoss / loadFlowResults.totalP) * 100).toFixed(2)}%<br>
+                
+                <span style="color: #e74c3c;">💰 TOTAL SYSTEM LOSSES:</span><br>
+                • Copper (I²R): ${losses.totalCopper.toFixed(2)} kW<br>
+                • Core (Iron): ${losses.core.toFixed(2)} kW<br>
+                • Harmonic (THD): ${losses.harmonic.toFixed(2)} kW<br>
+                • <span style="color: #ffd700;">TOTAL: ${losses.total.toFixed(2)} kW</span><br>
+                • Loss %: ${((losses.total / loadFlowResults.totalP) * 100).toFixed(2)}%<br>
             `;
             
             document.getElementById('summaryDisplay').innerHTML = html;
@@ -1588,13 +1784,14 @@ if (systemType === 'centralized') {
 
         function updateLoadMetrics() {
             const totalP = loadFlowResults.totalP;
-            const totalLossPercent = totalP > 0 ? ((loadFlowResults.totalPLoss / totalP) * 100).toFixed(3) : "0.000";
+            const losses = calculateDetailedLosses();
+            const totalLossPercent = totalP > 0 ? ((losses.total / totalP) * 100).toFixed(3) : "0.000";
             
             const metricsHtml = `
                 <div class="metric-card"><div class="label">Total Load</div><div class="value">${totalP.toFixed(1)}<span class="unit">kW</span></div></div>
                 <div class="metric-card"><div class="label">Peak Demand</div><div class="value">${(totalP * 1.2).toFixed(1)}<span class="unit">kW</span></div></div>
-                <div class="metric-card"><div class="label">System Loss</div><div class="value">${totalLossPercent}<span class="unit">%</span></div></div>
-                <div class="metric-card"><div class="label">BFS Iter</div><div class="value">${loadFlowResults.iterations}</div></div>
+                <div class="metric-card"><div class="label">Total Loss</div><div class="value">${totalLossPercent}<span class="unit">%</span></div></div>
+                <div class="metric-card"><div class="label">THD</div><div class="value">${thdPercent}<span class="unit">%</span></div></div>
             `;
             
             document.getElementById('loadMetrics').innerHTML = metricsHtml;
@@ -1839,15 +2036,15 @@ if (systemType === 'centralized') {
             ctx.font = '8px Arial';
             ctx.fillText('13.7 kV', sourcePos.x, sourcePos.y + 8);
             
-            // Draw main transformer - GRAY in distributed, ORANGE in centralized
+            // Draw main transformer
             ctx.beginPath();
             ctx.ellipse(mainTxPos.x, mainTxPos.y, 20, 17, 0, 0, Math.PI * 2);
             
             if (systemType === 'centralized') {
-                ctx.fillStyle = '#ffcc99';  // ORANGE/PEACH - ACTIVE
+                ctx.fillStyle = '#ffcc99';
                 ctx.strokeStyle = '#000000';
             } else {
-                ctx.fillStyle = '#cccccc';   // GRAY - IDLE
+                ctx.fillStyle = '#cccccc';
                 ctx.strokeStyle = '#aaaaaa';
             }
             ctx.fill();
@@ -1900,7 +2097,6 @@ if (systemType === 'centralized') {
                 ctx.fillStyle = '#000';
                 ctx.textAlign = 'center';
                 
-                // Shorten name for display
                 let displayName = name;
                 if (name.includes('METER 1')) displayName = 'METER 1';
                 if (name.includes('METER 2')) displayName = 'METER 2';
@@ -2001,6 +2197,7 @@ if (systemType === 'centralized') {
         function resetSimulation() {
             loadMultiplier = 1.0;
             powerFactor = 0.95;
+            thdPercent = 3.0;
             animationSpeed = 1.0;
             systemType = 'distributed';
             
@@ -2012,6 +2209,9 @@ if (systemType === 'centralized') {
             document.getElementById('meter1Value').textContent = '100%';
             document.getElementById('meter2Value').textContent = '100%';
             document.getElementById('meter3Value').textContent = '100%';
+            
+            document.getElementById('thdSlider').value = 3.0;
+            document.getElementById('thdValue').textContent = '3.0%';
             
             document.getElementById('meter1Slider').style.background = '#c9e0ff';
             document.getElementById('meter2Slider').style.background = '#ffe0c9';
@@ -2243,6 +2443,7 @@ if (systemType === 'centralized') {
         window.changeSystem = changeSystem;
         window.updateLoad = updateLoad;
         window.updatePF = updatePF;
+        window.updateTHD = updateTHD;
         window.updateSpeed = updateSpeed;
         window.updateMeterLM = updateMeterLM;
         window.startAnimation = startAnimation;

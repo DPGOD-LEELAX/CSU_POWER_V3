@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSU-Carig Power Flow — Mathematical Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Lora:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0b1f3a;
+    --gold: #e8b84b;
+    --gold-light: #f5d98c;
+    --cream: #fdf8f0;
+    --cream2: #f5ede0;
+    --red: #c0392b;
+    --green: #1a6b3a;
+    --blue: #1a3f6b;
+    --muted: #6b7280;
+    --border: #d6c9b0;
+    --mono: 'IBM Plex Mono', monospace;
+    --serif: 'Lora', serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--cream);
+    color: var(--navy);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* ---- COVER ---- */
+  .cover {
+    background: var(--navy);
+    color: white;
+    padding: 60px 60px 50px;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 380px; height: 380px;
+    border: 60px solid rgba(232,184,75,0.12);
+    border-radius: 50%;
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; left: 40px;
+    width: 220px; height: 220px;
+    border: 40px solid rgba(232,184,75,0.08);
+    border-radius: 50%;
+  }
+  .cover-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .cover h1 {
+    font-family: var(--serif);
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 12px;
+    max-width: 600px;
+  }
+  .cover-sub {
+    font-size: 16px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 40px;
+    max-width: 500px;
+  }
+  .cover-meta {
+    display: flex;
+    gap: 40px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    padding-top: 20px;
+    flex-wrap: wrap;
+  }
+  .cover-meta span { color: var(--gold-light); }
+
+  /* ---- LAYOUT ---- */
+  .wrapper { max-width: 860px; margin: 0 auto; padding: 50px 40px; }
+
+  /* ---- SECTION HEADERS ---- */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 52px 0 28px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--gold);
+  }
+  .section-number {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    background: var(--navy);
+    padding: 4px 10px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .section-header h2 {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  /* ---- EQUATION BLOCKS ---- */
+  .eq-block {
+    background: var(--navy);
+    border-radius: 8px;
+    padding: 22px 28px;
+    margin: 20px 0;
+    position: relative;
+  }
+  .eq-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .eq {
+    font-family: var(--mono);
+    font-size: 17px;
+    color: white;
+    line-height: 2;
+  }
+  .eq .sym { color: var(--gold-light); font-weight: 600; }
+  .eq .op { color: #a8d4f5; }
+  .eq .num { color: #98e8c0; }
+  .eq-tag {
+    position: absolute;
+    top: 14px; right: 16px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: rgba(255,255,255,0.25);
+  }
+  .eq-note {
+    font-size: 13px;
+    color: rgba(255,255,255,0.65);
+    margin-top: 10px;
+    font-family: var(--sans);
+    line-height: 1.6;
+  }
+
+  /* ---- VARIABLE TABLE ---- */
+  .var-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    font-size: 14px;
+  }
+  .var-table th {
+    background: var(--navy);
+    color: var(--gold);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+  }
+  .var-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .var-table tr:nth-child(even) td { background: var(--cream2); }
+  .var-table td:first-child {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--blue);
+    white-space: nowrap;
+  }
+  .var-table td:nth-child(2) { color: var(--muted); font-style: italic; }
+  .var-table td:last-child { font-family: var(--mono); font-size: 12px; color: var(--green); }
+
+  /* ---- INFO CARDS ---- */
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .card {
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    background: white;
+  }
+  .card-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    background: var(--navy);
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+  }
+  .card p { font-size: 13.5px; line-height: 1.65; color: #333; }
+  .card .highlight { color: var(--navy); font-weight: 500; }
+
+  /* ---- STEP BOXES ---- */
+  .steps { margin: 20px 0; }
+  .step {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: var(--gold);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-body { padding-top: 4px; }
+  .step-body strong { font-weight: 500; color: var(--navy); }
+  .step-body p { font-size: 13.5px; color: #444; margin-top: 3px; }
+
+  /* ---- CALLOUTS ---- */
+  .callout {
+    border-left: 4px solid var(--gold);
+    background: #fef9ed;
+    padding: 14px 18px;
+    border-radius: 0 6px 6px 0;
+    margin: 18px 0;
+    font-size: 13.5px;
+    color: #4a3a1a;
+  }
+  .callout.red { border-left-color: var(--red); background: #fef0ee; color: #4a1a1a; }
+  .callout.green { border-left-color: var(--green); background: #eef6f1; color: #1a3a2a; }
+  .callout strong { font-weight: 500; }
+
+  /* ---- DATA VALUES ---- */
+  .data-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 18px 0;
+  }
+  .data-cell {
+    background: var(--navy);
+    border-radius: 6px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .data-cell .val {
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--gold);
+    font-weight: 600;
+    display: block;
+  }
+  .data-cell .lbl {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    margin-top: 4px;
+    display: block;
+    letter-spacing: 0.5px;
+  }
+
+  /* ---- INLINE CODE ---- */
+  code {
+    font-family: var(--mono);
+    background: var(--cream2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+    color: var(--blue);
+  }
+
+  /* ---- COMPLIANCE TABLE ---- */
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    font-size: 13.5px;
+  }
+  .comp-table th {
+    background: var(--navy);
+    color: var(--gold);
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-align: left;
+  }
+  .comp-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .comp-table tr:nth-child(even) td { background: var(--cream2); }
+  .pass { color: var(--green); font-weight: 500; }
+  .fail { color: var(--red); font-weight: 500; }
+
+  /* ---- TOC ---- */
+  .toc { margin: 30px 0; }
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px dotted var(--border);
+    font-size: 14px;
+  }
+  .toc-num { font-family: var(--mono); color: var(--gold); font-size: 12px; min-width: 30px; }
+  .toc-dots { flex: 1; border-bottom: 1px dotted var(--border); margin-bottom: 3px; }
+
+  /* ---- FORMULA DERIVATION ---- */
+  .derivation {
+    background: #f0f4f8;
+    border: 1px solid #c5d3e0;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 18px 0;
+  }
+  .derivation .step-eq {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--navy);
+    padding: 5px 0;
+    border-bottom: 1px dashed #c5d3e0;
+    line-height: 1.9;
+  }
+  .derivation .step-eq:last-child { border-bottom: none; }
+  .derivation .step-eq .reason {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 14px;
+  }
+
+  hr.section-break {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+
+  @media print {
+    .cover { page-break-after: always; }
+    .section-header { page-break-before: auto; }
+    .eq-block, .card, .callout { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ====== COVER ====== -->
+<div class="cover">
+  <div class="cover-label">Technical Reference Document</div>
+  <h1>CSU-Carig Power Flow<br>Mathematical Framework</h1>
+  <div class="cover-sub">
+    Complete derivations, equations, and computational logic for the Backward-Forward Sweep load flow simulator developed for the CAGELCO distribution feeder serving the CSU-Carig campus. This document serves as a comprehensive reference for understanding the mathematical underpinnings of the simulation, including load modeling, impedance calculations, BFS iterations, and compliance checks against PEC 2025 standards.
+  </div>
+  <div class="cover-meta">
+    Campus: <span>Cagayan State University – Carig</span>
+    &nbsp;|&nbsp; Group: <span>Group 7</span>
+    &nbsp;|&nbsp; Base Voltage: <span>13.7 kV</span>
+    &nbsp;|&nbsp; System: <span>Radial Distribution</span>
+    &nbsp;|&nbsp; AY: <span>2025–2026</span>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="section-header">
+    <div class="section-number">Index</div>
+    <h2>Contents</h2>
+  </div>
+  <div class="toc">
+    <div class="toc-item"><span class="toc-num">§1</span> System Parameters &amp; Base Values<div class="toc-dots"></div></div>
+    <div class="toc-item"><span class="toc-num">§2</span> Load Modeling (P, Q, S)<div class="toc-dots"></div></div>
+    <div class="toc-item"><span class="toc-num">§3</span> Line Impedance &amp; Impedance Multiplier<div class="toc-dots"></div></div>
+    <div class="toc-item"><span class="toc-num">§4</span> Network Topology (Radial BFS Tree)<div class="toc-dots"></div></div>
+    <div class="toc-item"><span class="toc-num">§5</span> Backward-Forward Sweep (BFS) Method<div class="toc-dots"></div></div>
+    <div class="toc-item"><span class="toc-num">§6</span> Voltage Drop Calculation<div class="toc-dots"></div></div>
+    <div class="toc-item"><span class="toc-num">§7</span> Loss Calculations (Copper, Core, Harmonic)<div class="toc-dots"></div></div>
+    <div class="toc-item"><span class="toc-num">§8</span> PEC 2025 Compliance Check<div class="toc-dots"></div></div>
+    <div class="toc-item"><span class="toc-num">§9</span> Distributed vs. Centralized Comparison<div class="toc-dots"></div></div>
+    <div class="toc-item"><span class="toc-num">§10</span> Summary of All Equations<div class="toc-dots"></div></div>
+  </div>
+
+  <!-- ====== SECTION 1 ====== -->
+  <div class="section-header">
+    <div class="section-number">§1</div>
+    <h2>System Parameters &amp; Base Values</h2>
+  </div>
+
+  <p>The simulation uses a <strong>per-unit (pu) system</strong> based on the CAGELCO feeder serving CSU-Carig campus. All voltages, currents, and impedances are normalized to these base quantities.</p>
+
+  <div class="data-grid">
+    <div class="data-cell"><span class="val">13.7 kV</span><span class="lbl">Base Voltage (V<sub>base</sub>)</span></div>
+    <div class="data-cell"><span class="val">230 V</span><span class="lbl">Secondary Voltage (V<sub>sec</sub>)</span></div>
+    <div class="data-cell"><span class="val">25 kVA</span><span class="lbl">Base Apparent Power (S<sub>base</sub>)</span></div>
+    <div class="data-cell"><span class="val">0.9</span><span class="lbl">Transformer Power Factor (pf<sub>tx</sub>)</span></div>
+    <div class="data-cell"><span class="val">750 kVA</span><span class="lbl">Distributed Total Capacity</span></div>
+    <div class="data-cell"><span class="val">1500 kVA</span><span class="lbl">Centralized Total Capacity</span></div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Per-Unit Base Conversion</div>
+    <div class="eq"><span class="sym">V<sub>pu</sub></span> <span class="op">=</span> <span class="sym">V<sub>actual</sub></span> <span class="op">/</span> <span class="sym">V<sub>base</sub></span></div>
+    <div class="eq"><span class="sym">I<sub>base</sub></span> <span class="op">=</span> <span class="sym">S<sub>base</sub></span> <span class="op">/</span> (<span class="sym">√3</span> <span class="op">×</span> <span class="sym">V<sub>base</sub></span>)</div>
+    <div class="eq"><span class="sym">Z<sub>base</sub></span> <span class="op">=</span> <span class="sym">V<sub>base</sub>²</span> <span class="op">/</span> <span class="sym">S<sub>base</sub></span></div>
+    <div class="eq-note">The slack bus (source = CAGELCO feeder) is set at <strong>V = 1.0 pu ∠0°</strong> — it is the voltage reference for all downstream calculations.</div>
+  </div>
+
+  <table class="var-table">
+    <tr><th>Symbol</th><th>Description</th><th>Value</th></tr>
+    <tr><td>V<sub>base</sub></td><td>Base line-to-line voltage</td><td>13,700 V</td></tr>
+    <tr><td>S<sub>base</sub></td><td>Base apparent power</td><td>25,000 VA</td></tr>
+    <tr><td>pf<sub>tx</sub></td><td>Transformer power factor (used to derive P and Q from kVA rating)</td><td>0.9</td></tr>
+    <tr><td>V<sub>slack</sub></td><td>Slack bus voltage (per unit)</td><td>1.0 pu</td></tr>
+    <tr><td>BFS_TOL</td><td>Convergence tolerance</td><td>0.0001 pu</td></tr>
+    <tr><td>BFS_MAX</td><td>Maximum allowed iterations</td><td>50</td></tr>
+  </table>
+
+  <!-- ====== SECTION 2 ====== -->
+  <div class="section-header">
+    <div class="section-number">§2</div>
+    <h2>Load Modeling — P, Q, and S</h2>
+  </div>
+
+  <p>Each bus has a rated apparent power (kVA). The simulator converts this into active power P (kW) and reactive power Q (kVAR) using the transformer power factor assumption. Load multipliers scale these values at runtime.</p>
+
+  <div class="eq-block">
+    <div class="eq-label">Active Power at Each Bus</div>
+    <div class="eq"><span class="sym">P<sub>i</sub></span> <span class="op">=</span> <span class="sym">kVA<sub>i</sub></span> <span class="op">×</span> <span class="sym">pf<sub>tx</sub></span> <span class="op">×</span> <span class="sym">LM<sub>global</sub></span> <span class="op">×</span> <span class="sym">LM<sub>meter</sub></span></div>
+    <div class="eq-note">
+      <strong>pf<sub>tx</sub> = 0.9</strong> (transformer power factor, fixed)<br>
+      <strong>LM<sub>global</sub></strong> = Global load multiplier (slider, 0.5 to 2.0)<br>
+      <strong>LM<sub>meter</sub></strong> = Per-meter multiplier for M1, M2, or M3 (distributed only)
+    </div>
+    <div class="eq-tag">Eq. 2.1</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Reactive Power at Each Bus</div>
+    <div class="eq"><span class="sym">Q<sub>i</sub></span> <span class="op">=</span> <span class="sym">kVA<sub>i</sub></span> <span class="op">×</span> <span class="sym">√(1 − pf<sub>tx</sub>²)</span> <span class="op">×</span> <span class="sym">LM</span></div>
+    <div class="eq-note">Derived from the Pythagorean identity for power triangle: S² = P² + Q²</div>
+    <div class="eq-tag">Eq. 2.2</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Apparent Power (Magnitude)</div>
+    <div class="eq"><span class="sym">|S<sub>i</sub>|</span> <span class="op">=</span> <span class="sym">√(P<sub>i</sub>² + Q<sub>i</sub>²)</span> <span class="op">/</span> <span class="num">1000</span> &nbsp;&nbsp; (in kVA)</div>
+    <div class="eq-tag">Eq. 2.3</div>
+  </div>
+
+  <div class="callout">
+    <strong>Important distinction:</strong> The load multiplier (LM) scales <em>power demand</em> (P and Q), not the impedance. If you double the load, you double P and Q — but the line resistance R stays the same (unless you also change the impedance multiplier, §3).
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">Distributed buses (kVA)</div>
+      <p>
+        <span class="highlight">Meter 1 (M1-A1 to M1-A6):</span> 50 kVA each × 6 = 300 kVA<br>
+        <span class="highlight">Meter 2 (M2-B1 to M2-B3):</span> 100 kVA each × 3 = 300 kVA<br>
+        <span class="highlight">Meter 3 (M3-C1 to M3-C3):</span> 50 kVA each × 3 = 150 kVA<br>
+        <span class="highlight">Total Distributed:</span> 750 kVA
+      </p>
+    </div>
+    <div class="card">
+      <div class="card-title">Centralized buses (kVA)</div>
+      <p>
+        <span class="highlight">Bus 1 to Bus 12:</span> 125 kVA each × 12 = 1500 kVA<br>
+        All served by a single 1500 kVA meter (Catgelo 1)<br>
+        <span class="highlight">Delta connection</span> — no neutral conductor<br>
+        <span class="highlight">Total Centralized:</span> 1500 kVA
+      </p>
+    </div>
+  </div>
+
+  <!-- ====== SECTION 3 ====== -->
+  <div class="section-header">
+    <div class="section-number">§3</div>
+    <h2>Line Impedance &amp; Impedance Multiplier</h2>
+  </div>
+
+  <p>Each branch in the network has a complex impedance <code>Z = R + jX</code>, where R is resistance (causes real power loss) and X is reactance (causes reactive power loss). The <strong>Impedance Multiplier (Z_mult)</strong> scales both R and X proportionally.</p>
+
+  <div class="eq-block">
+    <div class="eq-label">Branch Impedance with Multiplier</div>
+    <div class="eq"><span class="sym">R<sub>eff</sub></span> <span class="op">=</span> <span class="sym">R<sub>base</sub></span> <span class="op">×</span> <span class="sym">factor<sub>i</sub></span> <span class="op">×</span> <span class="sym">Z<sub>mult</sub></span></div>
+    <div class="eq"><span class="sym">X<sub>eff</sub></span> <span class="op">=</span> <span class="sym">X<sub>base</sub></span> <span class="op">×</span> <span class="sym">factor<sub>i</sub></span> <span class="op">×</span> <span class="sym">Z<sub>mult</sub></span></div>
+    <div class="eq"><span class="sym">|Z<sub>eff</sub>|</span> <span class="op">=</span> <span class="sym">√(R<sub>eff</sub>² + X<sub>eff</sub>²)</span></div>
+    <div class="eq-note">
+      <strong>factor<sub>i</sub></strong> is a per-branch scaling factor that represents the physical cable length/distance difference between branches (0.3 to 0.75).<br>
+      <strong>Z<sub>mult</sub></strong> is the user-adjustable global impedance multiplier (0.5× to 3.0×).
+    </div>
+    <div class="eq-tag">Eq. 3.1–3.3</div>
+  </div>
+
+  <table class="var-table">
+    <tr><th>Parameter</th><th>Description</th><th>Base Value</th></tr>
+    <tr><td>R<sub>M1</sub></td><td>Resistance – Meter 1 branches</td><td>0.0114 Ω</td></tr>
+    <tr><td>X<sub>M1</sub></td><td>Reactance – Meter 1 branches</td><td>0.0473 Ω</td></tr>
+    <tr><td>R<sub>M2</sub></td><td>Resistance – Meter 2 branches</td><td>0.0055 Ω</td></tr>
+    <tr><td>X<sub>M2</sub></td><td>Reactance – Meter 2 branches</td><td>0.0226 Ω</td></tr>
+    <tr><td>R<sub>M3</sub></td><td>Resistance – Meter 3 branches</td><td>0.0011 Ω</td></tr>
+    <tr><td>X<sub>M3</sub></td><td>Reactance – Meter 3 branches</td><td>0.0046 Ω</td></tr>
+    <tr><td>R<sub>cent</sub></td><td>Resistance – Centralized main</td><td>0.0158 Ω</td></tr>
+    <tr><td>X<sub>cent</sub></td><td>Reactance – Centralized main</td><td>0.0656 Ω</td></tr>
+  </table>
+
+  <div class="callout">
+    <strong>X/R ratio:</strong> For all branches, X/R ≈ 4.15. This is typical of medium-voltage distribution cables where reactance dominates. High X/R ratios mean voltage drop is more sensitive to reactive power (Q) than to active power (P).
+  </div>
+
+  <!-- ====== SECTION 4 ====== -->
+  <div class="section-header">
+    <div class="section-number">§4</div>
+    <h2>Network Topology — Radial Tree</h2>
+  </div>
+
+  <p>CSU-Carig's distribution network is <strong>radial</strong> — there is exactly one path from the source (CAGELCO feeder) to each load bus. This makes BFS (Backward-Forward Sweep) the ideal solution method, since the network has no loops.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">Distributed topology</div>
+      <p>
+        Source (Node 0) → 3 parallel branches to Meters 1, 2, 3<br>
+        Meter 1 (Node 1) → 6 load buses (Nodes 4–9)<br>
+        Meter 2 (Node 2) → 3 load buses (Nodes 10–12)<br>
+        Meter 3 (Node 3) → 3 load buses (Nodes 13–15)<br>
+        <strong>Total: 16 nodes, 15 branches</strong>
+      </p>
+    </div>
+    <div class="card">
+      <div class="card-title">Centralized topology</div>
+      <p>
+        Source (Node 0) → Main Tx → Catgelo 1 meter (Node 0)<br>
+        Catgelo 1 → Bus 1 (Node 1) → ... → Bus 12 (Node 12)<br>
+        Feeder runs as a chain through all 12 buses<br>
+        <strong>Total: 13 nodes, 12 branches</strong>
+      </p>
+    </div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Branch Current Injection (Load Current)</div>
+    <div class="eq"><span class="sym">I<sub>load,i</sub></span> <span class="op">=</span> <span class="sym">|S<sub>i</sub>|</span> <span class="op">/</span> <span class="sym">max(0.7, V<sub>i</sub>)</span></div>
+    <div class="eq-note">
+      S<sub>i</sub> is in kVA divided by 1000. The denominator uses max(0.7, V<sub>i</sub>) to prevent division by near-zero voltage during early iterations when voltages haven't converged yet.
+    </div>
+    <div class="eq-tag">Eq. 4.1</div>
+  </div>
+
+  <!-- ====== SECTION 5 ====== -->
+  <div class="section-header">
+    <div class="section-number">§5</div>
+    <h2>Backward-Forward Sweep (BFS) Method</h2>
+  </div>
+
+  <p>The BFS method is specifically designed for radial (tree-like) distribution networks. It iterates in two phases until the solution converges. It is preferred over Newton-Raphson for radial networks because it is simpler, more numerically stable, and converges quickly.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">0</div>
+      <div class="step-body">
+        <strong>Initialize:</strong>
+        <p>Set all bus voltages to 1.0 pu: V[i] = 1.0 for all i. Set slack bus V[0] = 1.0 pu (fixed throughout). Set all branch currents I[j] = 0.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Compute load currents at each bus:</strong>
+        <p>For each load bus i, calculate I<sub>load,i</sub> = |S<sub>i</sub>| / max(0.7, V[i]), where S<sub>i</sub> depends on P<sub>i</sub>, Q<sub>i</sub>, and the current iteration's voltage.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Backward Sweep — sum currents from leaves to root:</strong>
+        <p>Traverse the tree from each leaf bus toward the source. For each branch, accumulate: I<sub>branch,j</sub> = I<sub>load,child</sub> + Σ(currents from all children of child). This gives the total current flowing through each branch.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Forward Sweep — compute voltages from root to leaves:</strong>
+        <p>Starting from the slack bus, propagate voltages forward. For each branch from node m to node n: V[n] = V[m] − (I[j] × |Z<sub>j</sub>| × dropScale)</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Check convergence:</strong>
+        <p>Compute max deviation: Δ = max|V<sub>new</sub>[i] − V<sub>old</sub>[i]|. If Δ &lt; 0.0001, stop. Otherwise, store V<sub>old</sub> = V<sub>new</sub> and go to Step 1.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Backward Sweep — Branch Current Accumulation</div>
+    <div class="eq"><span class="sym">I<sub>j</sub></span> <span class="op">=</span> <span class="sym">I<sub>load,child(j)</sub></span> <span class="op">+</span> <span class="sym">Σ I<sub>k</sub></span> &nbsp; <span style="color:rgba(255,255,255,0.5);font-size:13px;">(k = all branches downstream of child(j))</span></div>
+    <div class="eq-tag">Eq. 5.1</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Forward Sweep — Voltage Update</div>
+    <div class="eq"><span class="sym">V<sub>n</sub></span> <span class="op">=</span> <span class="sym">V<sub>m</sub></span> <span class="op">−</span> <span class="sym">I<sub>j</sub></span> <span class="op">×</span> <span class="sym">|Z<sub>j</sub>|</span> <span class="op">×</span> <span class="sym">dropScale</span></div>
+    <div class="eq-note">
+      <strong>Distributed system:</strong> dropScale = 3.5 (accounts for three-phase and feeder characteristics)<br>
+      <strong>Centralized system:</strong> dropScale = 0.35 (single main feeder with shorter runs)<br>
+      V<sub>n</sub> is clamped: max(0.70, V<sub>n</sub>) to prevent nonphysical values.
+    </div>
+    <div class="eq-tag">Eq. 5.2</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Convergence Criterion</div>
+    <div class="eq"><span class="sym">Δ<sub>max</sub></span> <span class="op">=</span> max<sub>i</sub> <span class="op">|</span><span class="sym">V<sub>i</sub><sup>(k)</sup></span> <span class="op">−</span> <span class="sym">V<sub>i</sub><sup>(k−1)</sup></span><span class="op">|</span> <span class="op">&lt;</span> <span class="num">0.0001</span> pu</div>
+    <div class="eq-tag">Eq. 5.3</div>
+  </div>
+
+  <!-- ====== SECTION 6 ====== -->
+  <div class="section-header">
+    <div class="section-number">§6</div>
+    <h2>Voltage Drop Calculation</h2>
+  </div>
+
+  <p>Voltage drop is the key performance metric for distribution systems. The Philippine Electrical Code (PEC) 2025 allows a maximum of <strong>5% voltage drop</strong> from the source to any load terminal.</p>
+
+  <div class="eq-block">
+    <div class="eq-label">Voltage Drop (Per Unit)</div>
+    <div class="eq"><span class="sym">ΔV<sub>pu</sub></span> <span class="op">=</span> <span class="sym">V<sub>source</sub></span> <span class="op">−</span> <span class="sym">V<sub>bus,i</sub></span></div>
+    <div class="eq-tag">Eq. 6.1</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Voltage Drop (Percentage)</div>
+    <div class="eq"><span class="sym">ΔV%</span> <span class="op">=</span> (<span class="sym">1.0</span> <span class="op">−</span> <span class="sym">V<sub>bus,i</sub></span>) <span class="op">×</span> <span class="num">100</span></div>
+    <div class="eq-note">Since source = 1.0 pu, the drop is simply (1 − V<sub>pu</sub>) × 100%</div>
+    <div class="eq-tag">Eq. 6.2</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Voltage Drop (in kV, at 13.7 kV base)</div>
+    <div class="eq"><span class="sym">V<sub>kV</sub></span> <span class="op">=</span> <span class="sym">V<sub>pu</sub></span> <span class="op">×</span> <span class="num">13.7</span> <span style="color:rgba(255,255,255,0.5);font-size:13px;">kV</span></div>
+    <div class="eq-tag">Eq. 6.3</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Voltage Angle (approximate)</div>
+    <div class="eq"><span class="sym">δ<sub>i</sub></span> <span class="op">=</span> <span class="op">−</span>(<span class="sym">1.0</span> <span class="op">−</span> <span class="sym">V<sub>i</sub></span>) <span class="op">×</span> <span class="sym">K<sub>angle</sub></span></div>
+    <div class="eq-note">
+      K<sub>angle</sub> = 20 for distributed, 30 for centralized.<br>
+      A larger angle indicates greater phase displacement from the slack bus, proportional to voltage drop.
+    </div>
+    <div class="eq-tag">Eq. 6.4</div>
+  </div>
+
+  <table class="comp-table">
+    <tr><th>Voltage Level (pu)</th><th>Voltage (kV @ 13.7 base)</th><th>Status</th><th>Color Code</th></tr>
+    <tr><td>≥ 0.97 pu</td><td>≥ 13.29 kV</td><td class="pass">GOOD — within 3%</td><td>Green</td></tr>
+    <tr><td>0.95 – 0.97 pu</td><td>13.02 – 13.29 kV</td><td style="color:#b8860b;font-weight:500">WARNING — 3–5% drop</td><td>Yellow</td></tr>
+    <tr><td>&lt; 0.95 pu</td><td>&lt; 13.015 kV</td><td class="fail">VIOLATION — exceeds 5%</td><td>Red</td></tr>
+  </table>
+
+  <!-- ====== SECTION 7 ====== -->
+  <div class="section-header">
+    <div class="section-number">§7</div>
+    <h2>Loss Calculations</h2>
+  </div>
+
+  <p>The simulator computes three types of losses. Each has a different cause and behavior with respect to load and system parameters.</p>
+
+  <hr class="section-break">
+  <h3 style="font-family:var(--serif);font-size:17px;margin-bottom:12px;">7.1 — Copper Losses (I²R)</h3>
+  <p>These are real power losses that occur whenever current flows through the resistance of a conductor. They are the dominant loss component and increase with the <em>square</em> of current.</p>
+
+  <div class="eq-block">
+    <div class="eq-label">Copper Loss — per branch</div>
+    <div class="eq"><span class="sym">P<sub>loss,j</sub></span> <span class="op">=</span> <span class="sym">I<sub>j</sub>²</span> <span class="op">×</span> <span class="sym">R<sub>j</sub></span> <span class="op">×</span> <span class="num">1000</span> &nbsp; (kW)</div>
+    <div class="eq-note">Multiplied by 1000 to convert from per-unit watts to kW. I<sub>j</sub> and R<sub>j</sub> are the current and resistance of branch j.</div>
+    <div class="eq-tag">Eq. 7.1</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Reactive Loss — per branch</div>
+    <div class="eq"><span class="sym">Q<sub>loss,j</sub></span> <span class="op">=</span> <span class="sym">I<sub>j</sub>²</span> <span class="op">×</span> <span class="sym">X<sub>j</sub></span> <span class="op">×</span> <span class="num">1000</span> &nbsp; (kVAR)</div>
+    <div class="eq-tag">Eq. 7.2</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Total Copper Loss (all branches)</div>
+    <div class="eq"><span class="sym">P<sub>copper</sub></span> <span class="op">=</span> <span class="sym">Σ<sub>j</sub></span> <span class="sym">I<sub>j</sub>²</span> <span class="op">×</span> <span class="sym">R<sub>j</sub></span> <span class="op">×</span> <span class="num">1000</span></div>
+    <div class="eq-tag">Eq. 7.3</div>
+  </div>
+
+  <hr class="section-break">
+  <h3 style="font-family:var(--serif);font-size:17px;margin-bottom:12px;">7.2 — Core (Iron) Losses</h3>
+  <p>These are constant losses in transformer cores caused by magnetic hysteresis and eddy currents. They are <strong>independent of load</strong> — they exist even when the transformer is on with no current flowing.</p>
+
+  <div class="eq-block">
+    <div class="eq-label">Core Loss</div>
+    <div class="eq"><span class="sym">P<sub>core</sub></span> <span class="op">=</span> <span class="sym">Capacity<sub>total</sub></span> <span class="op">×</span> <span class="sym">k<sub>core</sub></span></div>
+    <div class="eq-note">
+      k<sub>core</sub> = 0.005 (0.5% of rated transformer capacity, a standard engineering approximation)<br>
+      Distributed: 750 kVA × 0.005 = <strong>3.75 kW</strong><br>
+      Centralized: 1500 kVA × 0.005 = <strong>7.5 kW</strong>
+    </div>
+    <div class="eq-tag">Eq. 7.4</div>
+  </div>
+
+  <hr class="section-break">
+  <h3 style="font-family:var(--serif);font-size:17px;margin-bottom:12px;">7.3 — Harmonic Losses (THD Effect)</h3>
+  <p>Non-linear loads (computers, LED drivers, variable-frequency drives) inject current harmonics into the network. Harmonic currents flow at multiples of 50 Hz (100 Hz, 150 Hz, ...) and increase conductor heating beyond what the fundamental frequency current would cause.</p>
+
+  <div class="eq-block">
+    <div class="eq-label">Harmonic Multiplier</div>
+    <div class="eq"><span class="sym">K<sub>h</sub></span> <span class="op">=</span> <span class="num">1</span> <span class="op">+</span> (<span class="sym">THD%</span> <span class="op">/</span> <span class="num">100</span>) <span class="op">×</span> <span class="num">2</span></div>
+    <div class="eq-note">This factor accounts for increased conductor losses due to harmonic currents. At THD = 3%: K<sub>h</sub> = 1.06 (6% more losses than fundamental alone).</div>
+    <div class="eq-tag">Eq. 7.5</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Total Harmonic Loss</div>
+    <div class="eq"><span class="sym">P<sub>harmonic</sub></span> <span class="op">=</span> <span class="sym">P<sub>copper</sub></span> <span class="op">×</span> (<span class="sym">K<sub>h</sub></span> <span class="op">−</span> <span class="num">1</span>) <span class="op">+</span> (<span class="sym">P<sub>load</sub></span> <span class="op">×</span> <span class="num">0.005</span> <span class="op">×</span> (<span class="sym">THD%</span> <span class="op">/</span> <span class="num">5</span>))</div>
+    <div class="eq-note">
+      First term: extra copper heating from harmonics (proportional to existing I²R loss).<br>
+      Second term: direct load-side harmonic losses from non-linear equipment.
+    </div>
+    <div class="eq-tag">Eq. 7.6</div>
+  </div>
+
+  <div class="eq-block">
+    <div class="eq-label">Total System Loss</div>
+    <div class="eq"><span class="sym">P<sub>total loss</sub></span> <span class="op">=</span> <span class="sym">P<sub>copper</sub></span> <span class="op">+</span> <span class="sym">P<sub>core</sub></span> <span class="op">+</span> <span class="sym">P<sub>harmonic</sub></span></div>
+    <div class="eq"><span class="sym">Loss%</span> <span class="op">=</span> (<span class="sym">P<sub>total loss</sub></span> <span class="op">/</span> <span class="sym">P<sub>load</sub></span>) <span class="op">×</span> <span class="num">100</span></div>
+    <div class="eq-tag">Eq. 7.7 – 7.8</div>
+  </div>
+
+  <!-- ====== SECTION 8 ====== -->
+  <div class="section-header">
+    <div class="section-number">§8</div>
+    <h2>PEC 2025 Compliance Check</h2>
+  </div>
+
+  <p>The Philippine Electrical Code 2025 mandates that voltage at any load terminal shall not fall below 95% of the nominal voltage (i.e., ≥ 0.95 pu). The simulator checks this automatically after each BFS solution.</p>
+
+  <div class="eq-block">
+    <div class="eq-label">Worst-case voltage drop</div>
+    <div class="eq"><span class="sym">V<sub>worst</sub></span> <span class="op">=</span> min<sub>i</sub>(<span class="sym">V<sub>i</sub></span>) &nbsp;&nbsp; <span style="color:rgba(255,255,255,0.5);font-size:13px;">across all load buses</span></div>
+    <div class="eq"><span class="sym">ΔV%<sub>worst</sub></span> <span class="op">=</span> (<span class="num">1.0</span> <span class="op">−</span> <span class="sym">V<sub>worst</sub></span>) <span class="op">×</span> <span class="num">100</span></div>
+    <div class="eq-tag">Eq. 8.1 – 8.2</div>
+  </div>
+
+  <div class="callout green">
+    <strong>PEC Compliant:</strong> System passes if V<sub>worst</sub> ≥ 0.95 pu (ΔV% ≤ 5.00%). 
+    At 13.7 kV base, this means the minimum acceptable bus voltage is <strong>13.015 kV</strong>.
+  </div>
+
+  <div class="callout red">
+    <strong>PEC Violation:</strong> System fails if any bus voltage falls below 0.95 pu. In practice this means loads experience undervoltage, which can damage motors, cause equipment malfunction, and reduce efficiency.
+  </div>
+
+  <!-- ====== SECTION 9 ====== -->
+  <div class="section-header">
+    <div class="section-number">§9</div>
+    <h2>Distributed vs. Centralized — Key Differences</h2>
+  </div>
+
+  <table class="comp-table">
+    <tr>
+      <th>Parameter</th>
+      <th>Distributed</th>
+      <th>Centralized</th>
+    </tr>
+    <tr><td>Total Capacity</td><td>750 kVA (3 meters)</td><td>1500 kVA (1 meter)</td></tr>
+    <tr><td>Number of buses</td><td>12 load buses</td><td>12 load buses</td></tr>
+    <tr><td>Neutral wire</td><td>Yes (4-wire, star)</td><td>No (3-wire, delta)</td></tr>
+    <tr><td>Core losses</td><td>3.75 kW constant</td><td>7.5 kW constant</td></tr>
+    <tr><td>Fault isolation</td><td>Per meter (smaller outage)</td><td>Whole campus affected</td></tr>
+    <tr><td>Voltage regulation</td><td>Shorter feeders = better</td><td>Longer feeders = worse at end</td></tr>
+    <tr><td>Base impedance (M1)</td><td>R=0.0114 Ω, X=0.0473 Ω</td><td>R=0.0158 Ω, X=0.0656 Ω</td></tr>
+    <tr><td>dropScale factor</td><td>3.5</td><td>0.35</td></tr>
+  </table>
+
+  <div class="callout">
+    <strong>Why dropScale differs:</strong> The distributed system has three separate feeders serving localized groups of buses, so the cumulative impedance effect over the feeder is more pronounced (high dropScale). The centralized system runs a single long feeder through all 12 buses in sequence, and the dropScale is calibrated to reflect the actual feeder length and conductor properties.
+  </div>
+
+  <!-- ====== SECTION 10 ====== -->
+  <div class="section-header">
+    <div class="section-number">§10</div>
+    <h2>Summary of All Equations</h2>
+  </div>
+
+  <p>Quick-reference table of every equation used in the simulator, in order of computation.</p>
+
+  <div class="derivation">
+    <div class="step-eq"><strong>Step 1 — Load Power</strong></div>
+    <div class="step-eq">P<sub>i</sub> = kVA<sub>i</sub> × pf<sub>tx</sub> × LM<sub>global</sub> × LM<sub>meter</sub> <span class="reason">Active power (kW) per bus</span></div>
+    <div class="step-eq">Q<sub>i</sub> = kVA<sub>i</sub> × √(1 − pf<sub>tx</sub>²) × LM <span class="reason">Reactive power (kVAR) per bus</span></div>
+    <div class="step-eq">|S<sub>i</sub>| = √(P<sub>i</sub>² + Q<sub>i</sub>²) / 1000 <span class="reason">Apparent power (kVA)</span></div>
+
+    <div class="step-eq" style="margin-top:10px;"><strong>Step 2 — Impedance</strong></div>
+    <div class="step-eq">R<sub>eff</sub> = R<sub>base</sub> × factor<sub>i</sub> × Z<sub>mult</sub> <span class="reason">Effective resistance (Ω)</span></div>
+    <div class="step-eq">X<sub>eff</sub> = X<sub>base</sub> × factor<sub>i</sub> × Z<sub>mult</sub> <span class="reason">Effective reactance (Ω)</span></div>
+    <div class="step-eq">|Z<sub>j</sub>| = √(R<sub>j</sub>² + X<sub>j</sub>²) <span class="reason">Impedance magnitude (Ω)</span></div>
+
+    <div class="step-eq" style="margin-top:10px;"><strong>Step 3 — BFS Load Current</strong></div>
+    <div class="step-eq">I<sub>load,i</sub> = |S<sub>i</sub>| / max(0.7, V<sub>i</sub>) <span class="reason">Current injection at each load bus</span></div>
+
+    <div class="step-eq" style="margin-top:10px;"><strong>Step 4 — Backward Sweep</strong></div>
+    <div class="step-eq">I<sub>j</sub> = I<sub>load,child</sub> + Σ I<sub>downstream</sub> <span class="reason">Branch current (accumulate leaf → root)</span></div>
+
+    <div class="step-eq" style="margin-top:10px;"><strong>Step 5 — Forward Sweep</strong></div>
+    <div class="step-eq">V<sub>n</sub> = V<sub>m</sub> − I<sub>j</sub> × |Z<sub>j</sub>| × dropScale <span class="reason">Bus voltage update (root → leaves)</span></div>
+
+    <div class="step-eq" style="margin-top:10px;"><strong>Step 6 — Convergence Check</strong></div>
+    <div class="step-eq">Δ<sub>max</sub> = max|V<sup>(k)</sup> − V<sup>(k−1)</sup>| &lt; 0.0001 pu <span class="reason">Stop if converged</span></div>
+
+    <div class="step-eq" style="margin-top:10px;"><strong>Step 7 — Losses</strong></div>
+    <div class="step-eq">P<sub>loss,j</sub> = I<sub>j</sub>² × R<sub>j</sub> × 1000 <span class="reason">Copper loss per branch (kW)</span></div>
+    <div class="step-eq">P<sub>core</sub> = Capacity<sub>total</sub> × 0.005 <span class="reason">Core (iron) loss (kW)</span></div>
+    <div class="step-eq">K<sub>h</sub> = 1 + (THD% / 100) × 2 <span class="reason">Harmonic multiplier</span></div>
+    <div class="step-eq">P<sub>harmonic</sub> = P<sub>copper</sub> × (K<sub>h</sub>−1) + P<sub>load</sub> × 0.005 × (THD%/5) <span class="reason">Harmonic losses</span></div>
+    <div class="step-eq">P<sub>total loss</sub> = P<sub>copper</sub> + P<sub>core</sub> + P<sub>harmonic</sub> <span class="reason">Total system losses (kW)</span></div>
+
+    <div class="step-eq" style="margin-top:10px;"><strong>Step 8 — Compliance</strong></div>
+    <div class="step-eq">ΔV% = (1.0 − V<sub>worst</sub>) × 100 <span class="reason">Worst-case voltage drop</span></div>
+    <div class="step-eq">Compliant if ΔV% ≤ 5.00% (i.e., V<sub>worst</sub> ≥ 0.95 pu) <span class="reason">PEC 2025 standard</span></div>
+  </div>
+
+  <div class="callout green" style="margin-top:30px;">
+    <strong>For your defense panel:</strong> The simulator uses the Backward-Forward Sweep method — an industry-standard power flow algorithm for radial distribution networks (documented in Kersting, W.H., "Distribution System Modeling and Analysis," 2002). It converges in fewer than 50 iterations with tolerance 0.0001 pu, making it computationally efficient for real-time interactive use.
+  </div>
+
+  <div style="margin-top:50px;padding:20px;background:var(--navy);border-radius:8px;text-align:center;">
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;">CSU-Carig Power Flow Simulator — Group 7</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:6px;">AY 2025–2026 · 13.7 kV Base · BFS Load Flow · PEC 2025 Compliant</div>
+  </div>
+
+</div>
+</body>
+</html>

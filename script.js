@@ -1352,7 +1352,7 @@
                         
                         ctx.font = 'bold 7px Arial';
                         ctx.fillStyle = '#000';
-                        ctx.fillText(`Dist Tr${idx+1}`, pos.x, pos.y - 15);
+                        ctx.fillText(`Distribution Tr${idx+1}`, pos.x, pos.y - 15);
                     }
                 });
             }

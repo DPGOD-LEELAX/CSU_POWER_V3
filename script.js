@@ -330,22 +330,35 @@
 
         
         // Update loss display with PER METER breakdown na ito atm
+                
         function updateLossDisplay() {
             const totalLosses = calculateDetailedLosses();
-            const perMeterLosses = calculateLossesPerMeter();
             const totalLoad = loadFlowResults.totalP || 0;
             
             let html = `
-                <span style="color: #ffd700;">📊 LOSS BREAKDOWN - PER METER ANALYSIS</span><br>
+                <span style="color: #ffd700;">📊 LOSS BREAKDOWN</span><br>
                 <span style="color: #ffd700;">────────────────────────────────</span><br><br>
                 
                 <span style="color: #ff0000;">🔴 COPPER LOSSES (I²R):</span><br>
                 <span style="font-size: 0.85em; color: #aaa;"> from current flowing through resistance</span><br>
                 ㅤ<b>Total: ${totalLosses.totalCopper.toFixed(2)} kW</b><br>
-                ㅤㅤ├─ METER 1 (300 kVA): ${perMeterLosses.meter1.copper.toFixed(2)} kW<br>
-                ㅤㅤ├─ METER 2 (300 kVA): ${perMeterLosses.meter2.copper.toFixed(2)} kW<br>
-                ㅤㅤ└─ METER 3 (150 kVA): ${perMeterLosses.meter3.copper.toFixed(2)} kW<br>
             `;
+            
+            // ===========================================
+            // ONLY SHOW PER-METER BREAKDOWN FOR DISTRIBUTED
+            // ===========================================
+            if (systemType === 'distributed') {
+                const perMeterLosses = calculateLossesPerMeter();
+                
+                html += `
+                    ㅤㅤ├─ METER 1 (300 kVA): ${perMeterLosses.meter1.copper.toFixed(2)} kW<br>
+                    ㅤㅤ├─ METER 2 (300 kVA): ${perMeterLosses.meter2.copper.toFixed(2)} kW<br>
+                    ㅤㅤ└─ METER 3 (150 kVA): ${perMeterLosses.meter3.copper.toFixed(2)} kW<br>
+                `;
+            } else {
+                // CENTRALIZED - single line, no meter breakdown
+                html += `ㅤㅤ└─ Single Feeder: ${totalLosses.totalCopper.toFixed(2)} kW<br>`;
+            }
             
             // Show top loss locations
             if (totalLosses.branches.length > 0) {
@@ -360,43 +373,84 @@
                 <br><span style="color: #e67e22;">🟠 CORE (IRON) LOSSES:</span><br>
                 <span style="font-size: 0.85em; color: #aaa;"> constant, from transformer magnetization (0.5% of rating)</span><br>
                 ㅤ<b>Total: ${totalLosses.core.toFixed(2)} kW</b><br>
-                ㅤㅤ├─ METER 1 (300 kVA): ${perMeterLosses.meter1.core.toFixed(2)} kW<br>
-                ㅤㅤ├─ METER 2 (300 kVA): ${perMeterLosses.meter2.core.toFixed(2)} kW<br>
-                ㅤㅤ└─ METER 3 (150 kVA): ${perMeterLosses.meter3.core.toFixed(2)} kW<br>
-                
+            `;
+            
+            // Core losses per meter for distributed
+            if (systemType === 'distributed') {
+                const perMeterLosses = calculateLossesPerMeter();
+                html += `
+                    ㅤㅤ├─ METER 1 (300 kVA): ${perMeterLosses.meter1.core.toFixed(2)} kW<br>
+                    ㅤㅤ├─ METER 2 (300 kVA): ${perMeterLosses.meter2.core.toFixed(2)} kW<br>
+                    ㅤㅤ└─ METER 3 (150 kVA): ${perMeterLosses.meter3.core.toFixed(2)} kW<br>
+                `;
+            } else {
+                html += `ㅤㅤ└─ Single Transformer: ${totalLosses.core.toFixed(2)} kW<br>`;
+            }
+            
+            html += `
                 <br><span style="color: #9b59b6;">🟣 HARMONIC LOSSES (THD = ${thdPercent}%):</span><br>
                 <span style="font-size: 0.85em; color: #aaa;"> from non-linear loads (computers, LEDs, VFDs)</span><br>
                 ㅤ<b>Total: ${totalLosses.harmonic.toFixed(2)} kW</b><br>
-                ㅤㅤ├─ METER 1 (300 kVA): ${perMeterLosses.meter1.harmonic.toFixed(2)} kW<br>
-                ㅤㅤ├─ METER 2 (300 kVA): ${perMeterLosses.meter2.harmonic.toFixed(2)} kW<br>
-                ㅤㅤ└─ METER 3 (150 kVA): ${perMeterLosses.meter3.harmonic.toFixed(2)} kW<br>
+            `;
+            
+            // Harmonic losses per meter for distributed
+            if (systemType === 'distributed') {
+                const perMeterLosses = calculateLossesPerMeter();
+                html += `
+                    ㅤㅤ├─ METER 1 (300 kVA): ${perMeterLosses.meter1.harmonic.toFixed(2)} kW<br>
+                    ㅤㅤ├─ METER 2 (300 kVA): ${perMeterLosses.meter2.harmonic.toFixed(2)} kW<br>
+                    ㅤㅤ└─ METER 3 (150 kVA): ${perMeterLosses.meter3.harmonic.toFixed(2)} kW<br>
+                `;
+            } else {
+                html += `ㅤㅤ└─ Single Feeder: ${totalLosses.harmonic.toFixed(2)} kW<br>`;
+            }
+            
+            html += `
                 ㅤTHD multiplier: ${totalLosses.thdEffect.toFixed(2)}x<br>
                 
                 <br><span style="color: #ffd700;">══════════════════════════════</span><br>
                 <span style="color: #ff0000; font-size: 1.1em;">💰 TOTAL LOSSES: ${totalLosses.total.toFixed(2)} kW</span><br>
                 <span style="color: #aaa;"> (${((totalLosses.total / totalLoad) * 100).toFixed(2)}% of total load)</span><br>
                 <span style="color: #ffd700;">══════════════════════════════</span><br>
-                
-                <br><span style="color: #3498db;">📋 PER METER LOSS SUMMARY:</span><br>
-                <span style="color: #ffd700;">────────────────────────────────</span><br>
-                ㅤ<b>METER 1 (300 kVA):</b> ${perMeterLosses.meter1.total.toFixed(2)} kW total losses<br>
-                ㅤㅤ├─ Copper: ${perMeterLosses.meter1.copper.toFixed(2)} kW<br>
-                ㅤㅤ├─ Core: ${perMeterLosses.meter1.core.toFixed(2)} kW<br>
-                ㅤㅤ└─ Harmonic: ${perMeterLosses.meter1.harmonic.toFixed(2)} kW<br>
-                <br>
-                ㅤ<b>METER 2 (300 kVA):</b> ${perMeterLosses.meter2.total.toFixed(2)} kW total losses<br>
-                ㅤㅤ├─ Copper: ${perMeterLosses.meter2.copper.toFixed(2)} kW<br>
-                ㅤㅤ├─ Core: ${perMeterLosses.meter2.core.toFixed(2)} kW<br>
-                ㅤㅤ└─ Harmonic: ${perMeterLosses.meter2.harmonic.toFixed(2)} kW<br>
-                <br>
-                ㅤ<b>METER 3 (150 kVA):</b> ${perMeterLosses.meter3.total.toFixed(2)} kW total losses<br>
-                ㅤㅤ├─ Copper: ${perMeterLosses.meter3.copper.toFixed(2)} kW<br>
-                ㅤㅤ├─ Core: ${perMeterLosses.meter3.core.toFixed(2)} kW<br>
-                ㅤㅤ└─ Harmonic: ${perMeterLosses.meter3.harmonic.toFixed(2)} kW<br>
-                
+            `;
+            
+            // PER METER SUMMARY - ONLY FOR DISTRIBUTED
+            if (systemType === 'distributed') {
+                const perMeterLosses = calculateLossesPerMeter();
+                html += `
+                    <br><span style="color: #3498db;">📋 PER METER LOSS SUMMARY (DISTRIBUTED ONLY):</span><br>
+                    <span style="color: #ffd700;">────────────────────────────────</span><br>
+                    ㅤ<b>METER 1 (300 kVA):</b> ${perMeterLosses.meter1.total.toFixed(2)} kW total losses<br>
+                    ㅤㅤ├─ Copper: ${perMeterLosses.meter1.copper.toFixed(2)} kW<br>
+                    ㅤㅤ├─ Core: ${perMeterLosses.meter1.core.toFixed(2)} kW<br>
+                    ㅤㅤ└─ Harmonic: ${perMeterLosses.meter1.harmonic.toFixed(2)} kW<br>
+                    <br>
+                    ㅤ<b>METER 2 (300 kVA):</b> ${perMeterLosses.meter2.total.toFixed(2)} kW total losses<br>
+                    ㅤㅤ├─ Copper: ${perMeterLosses.meter2.copper.toFixed(2)} kW<br>
+                    ㅤㅤ├─ Core: ${perMeterLosses.meter2.core.toFixed(2)} kW<br>
+                    ㅤㅤ└─ Harmonic: ${perMeterLosses.meter2.harmonic.toFixed(2)} kW<br>
+                    <br>
+                    ㅤ<b>METER 3 (150 kVA):</b> ${perMeterLosses.meter3.total.toFixed(2)} kW total losses<br>
+                    ㅤㅤ├─ Copper: ${perMeterLosses.meter3.copper.toFixed(2)} kW<br>
+                    ㅤㅤ├─ Core: ${perMeterLosses.meter3.core.toFixed(2)} kW<br>
+                    ㅤㅤ└─ Harmonic: ${perMeterLosses.meter3.harmonic.toFixed(2)} kW<br>
+                `;
+            } else {
+                // CENTRALIZED - single summary
+                html += `
+                    <br><span style="color: #3498db;">📋 SYSTEM SUMMARY (CENTRALIZED):</span><br>
+                    <span style="color: #ffd700;">────────────────────────────────</span><br>
+                    ㅤ<b>Single Feeder (1500 kVA):</b> ${totalLosses.total.toFixed(2)} kW total losses<br>
+                    ㅤㅤ├─ Copper: ${totalLosses.totalCopper.toFixed(2)} kW<br>
+                    ㅤㅤ├─ Core: ${totalLosses.core.toFixed(2)} kW<br>
+                    ㅤㅤ└─ Harmonic: ${totalLosses.harmonic.toFixed(2)} kW<br>
+                `;
+            }
+            
+            html += `
                 <br><span style="color: #3498db;">📋 LOSS FACTORS:</span><br>
                 ㅤ• Copper losses: I²R (depends on current)<br>
-                ㅤ• Core losses: Constant (0.5% of meter rating)<br>
+                ㅤ• Core losses: Constant (0.5% of rating)<br>
                 ㅤ• Harmonic losses: ${(thdPercent * 0.2).toFixed(1)}% of load + ${(thdPercent/5).toFixed(1)}% of copper<br>
                 ㅤ• <strong>Impedance Multiplier: ${zMultiplier.toFixed(1)}x</strong> (scales all R and X)<br>
             `;
